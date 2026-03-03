@@ -1,10 +1,14 @@
 ---
 name: aicoin
 description: >
-  AiCoin crypto data & trading toolkit — 40+ tools for real-time prices, AI analysis,
-  funding rates, K-lines, whale tracking, Hyperliquid on-chain data, exchange trading
-  (CCXT), and Freqtrade bot control. Scripts auto-load .env — just run them directly.
-  If .env is missing, guide the user through the Setup Checklist in SKILL.md.
+  Use this skill when the user asks to buy, sell, or trade crypto on exchanges like
+  Binance, OKX, Bybit, Bitget, Gate, HTX, KuCoin, MEXC, or Coinbase — spot or futures,
+  place orders, check balance, set leverage, view positions, or cancel orders.
+  Also use when the user asks for crypto market data: real-time prices, K-lines, funding
+  rates, open interest, liquidation data, whale tracking, AI analysis, order flow, news,
+  Hyperliquid on-chain data, or Freqtrade bot control.
+  Scripts auto-load .env — just run them directly. If a script fails due to missing
+  credentials, guide the user through the Setup Checklist in SKILL.md.
 metadata:
   openclaw:
     primaryEnv: "AICOIN_ACCESS_KEY_ID"
