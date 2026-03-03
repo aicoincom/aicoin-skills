@@ -22,7 +22,7 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 
 ## Setup Checklist
 
-**Scripts auto-load `.env` files** from these locations (first found wins):
+**Scripts auto-load `.env` files** from these locations (earlier paths take priority):
 1. Current working directory (`.env`)
 2. `~/.openclaw/workspace/.env`
 3. `~/.openclaw/.env`
@@ -30,12 +30,11 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 **Before asking the user for ANY credentials, first check if `.env` already exists:**
 
 ```bash
-cat ~/.openclaw/workspace/.env 2>/dev/null || cat ~/.openclaw/.env 2>/dev/null || echo "NO_ENV_FOUND"
+grep -c "AICOIN_ACCESS_KEY_ID" ~/.openclaw/workspace/.env 2>/dev/null || echo "0"
 ```
 
-- If `.env` exists and contains `AICOIN_ACCESS_KEY_ID` → **skip AiCoin key setup, just run scripts directly**
-- If `.env` exists but lacks `AICOIN_ACCESS_KEY_ID` → **the built-in free key works automatically, just run scripts**
-- If no `.env` at all → **the built-in free key still works, just run scripts. Only ask about keys if the user wants their own paid key.**
+- If output is `1` or more → **`.env` has AiCoin key configured. Skip setup, just run scripts directly.**
+- If output is `0` → **No AiCoin key, but the built-in free key works automatically. Just run scripts.**
 
 **Only ask setup questions when the user explicitly requests features that need configuration:**
 - Exchange trading (Binance, OKX, etc.) → needs exchange API keys + `cd <skill-dir>/aicoin && npm install` for ccxt
