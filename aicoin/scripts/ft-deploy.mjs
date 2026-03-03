@@ -79,12 +79,27 @@ function installSystemDeps() {
     if (!hasCommand('brew')) {
       throw new Error('Homebrew not found. Install: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"');
     }
+    // Skip brew auto-update — it can take minutes and cause timeouts
+    const brewEnv = { ...process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' };
+
     if (!hasTALib()) {
-      console.error('Installing TA-Lib and HDF5 via Homebrew...');
+      console.error('Installing TA-Lib via Homebrew...');
       try {
-        run('brew install ta-lib hdf5', { timeout: 300000 });
+        run('brew install ta-lib', { timeout: 300000, env: brewEnv });
       } catch (e) {
-        throw new Error(`Failed to install system deps via Homebrew: ${e.message}\nManual fix: brew install ta-lib hdf5`);
+        throw new Error(`Failed to install TA-Lib: ${e.message}\nManual fix: HOMEBREW_NO_AUTO_UPDATE=1 brew install ta-lib`);
+      }
+    }
+
+    // HDF5 — check separately
+    let hasHDF5 = false;
+    try { run('brew list hdf5 2>/dev/null'); hasHDF5 = true; } catch {}
+    if (!hasHDF5) {
+      console.error('Installing HDF5 via Homebrew...');
+      try {
+        run('brew install hdf5', { timeout: 300000, env: brewEnv });
+      } catch (e) {
+        throw new Error(`Failed to install HDF5: ${e.message}\nManual fix: HOMEBREW_NO_AUTO_UPDATE=1 brew install hdf5`);
       }
     }
   } else if (platform === 'linux') {
