@@ -3,8 +3,8 @@ name: aicoin
 description: >
   AiCoin crypto data & trading toolkit — 40+ tools for real-time prices, AI analysis,
   funding rates, K-lines, whale tracking, Hyperliquid on-chain data, exchange trading
-  (CCXT), and Freqtrade bot control. Install first, then walk the user through the
-  First-Time Setup Checklist in SKILL.md before running any action.
+  (CCXT), and Freqtrade bot control. Scripts auto-load .env — just run them directly.
+  If .env is missing, guide the user through the Setup Checklist in SKILL.md.
 metadata:
   openclaw:
     primaryEnv: "AICOIN_ACCESS_KEY_ID"
@@ -20,42 +20,41 @@ metadata:
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-## IMPORTANT: First-Time Setup Checklist
+## Setup Checklist
 
-**Before running ANY action from this skill, you MUST ask the user the following questions:**
+**Scripts auto-load `.env` files** from these locations (first found wins):
+1. Current working directory (`.env`)
+2. `~/.openclaw/workspace/.env`
+3. `~/.openclaw/.env`
 
-1. "Do you have an AiCoin API key, or would you like to use the free built-in key (IP rate-limited)?"
-   - If yes → ask them to provide `AICOIN_ACCESS_KEY_ID` and `AICOIN_ACCESS_SECRET`
-   - If no → the built-in free key will be used automatically
+**Before asking the user for ANY credentials, first check if `.env` already exists:**
 
-2. "Do you need exchange trading features (Binance, OKX, Bybit, etc.)?"
-   - If yes → tell them to run `npm install -g ccxt`, then ask for their exchange API keys
-   - If no → skip exchange-related setup
+```bash
+cat ~/.openclaw/workspace/.env 2>/dev/null || cat ~/.openclaw/.env 2>/dev/null || echo "NO_ENV_FOUND"
+```
 
-3. "Do you need Freqtrade bot control?"
-   - If yes → ask for `FREQTRADE_URL`, `FREQTRADE_USERNAME`, `FREQTRADE_PASSWORD`
-   - If no → skip Freqtrade setup
+- If `.env` exists and contains `AICOIN_ACCESS_KEY_ID` → **skip AiCoin key setup, just run scripts directly**
+- If `.env` exists but lacks `AICOIN_ACCESS_KEY_ID` → **the built-in free key works automatically, just run scripts**
+- If no `.env` at all → **the built-in free key still works, just run scripts. Only ask about keys if the user wants their own paid key.**
 
-4. "Do you need a proxy to access exchanges? (e.g. users in China)"
-   - If yes → ask for proxy URL (supports http, https, socks5)
-   - If no → skip proxy setup
+**Only ask setup questions when the user explicitly requests features that need configuration:**
+- Exchange trading (Binance, OKX, etc.) → needs exchange API keys + `cd <skill-dir>/aicoin && npm install` for ccxt
+- Freqtrade bot control → needs `FREQTRADE_URL`, `FREQTRADE_USERNAME`, `FREQTRADE_PASSWORD`
+- Proxy access → needs `PROXY_URL`
 
-After collecting answers, help the user create a `.env` file in their OpenClaw workspace directory with the required variables. Only include the variables they actually need.
-
-**Do NOT skip this setup. Do NOT run actions before confirming the environment is ready.**
+**Do NOT block the user from running commands. The skill works out of the box with the built-in free key.**
 
 ### SECURITY: How to Run Scripts
 
-Environment variables are loaded from `.env` automatically by OpenClaw. When running scripts:
+**Scripts auto-load `.env` — NEVER pass credentials inline.** Just run:
 
-**CORRECT** — just run the script directly:
 ```bash
 node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'
 ```
 
-**WRONG** — NEVER pass API keys as inline environment variables:
+**NEVER do this** — it exposes secrets in conversation logs:
 ```bash
-# DO NOT DO THIS — it exposes secrets in conversation logs!
+# WRONG! DO NOT DO THIS!
 AICOIN_ACCESS_KEY_ID=xxx node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'
 ```
 
