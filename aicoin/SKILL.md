@@ -13,7 +13,7 @@ metadata:
       bins:
         - "node"
     homepage: "https://www.aicoin.com/opendata"
-    source: "https://github.com/bbx-com/aicoin-skills"
+    source: "https://github.com/aicoincom/aicoin-skills"
     license: "MIT"
 ---
 

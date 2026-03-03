@@ -11,7 +11,7 @@ clawhub install aicoin
 或从 GitHub 安装：
 
 ```bash
-npx skills add bbx-com/aicoin-skills
+npx skills add aicoincom/aicoin-skills
 ```
 
 ## 包含内容
