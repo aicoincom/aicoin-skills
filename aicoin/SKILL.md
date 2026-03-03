@@ -490,12 +490,13 @@ The `open` action automatically:
 
 ### scripts/ft-deploy.mjs — Freqtrade Deployment
 
-**One-click Freqtrade deployment via pip + venv (no Docker needed).** Reads exchange keys from `.env`, creates Python venv, installs Freqtrade, generates config, starts as background process, auto-writes `FREQTRADE_*` vars to `.env`.
+**One-click Freqtrade deployment via `git clone` + official `setup.sh` (no Docker).** Clones the Freqtrade repo, runs `setup.sh -i` to install all dependencies (including TA-Lib), generates config from `.env` exchange keys, starts as background process, auto-writes `FREQTRADE_*` vars to `.env`.
 
 | Action | Description | Params |
 |--------|-------------|--------|
-| `check` | Check prerequisites (Python, system deps, exchange keys) | None |
-| `deploy` | Deploy Freqtrade (install deps, create venv, pip install, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
+| `check` | Check prerequisites (Python 3.11+, git, exchange keys) | None |
+| `deploy` | Deploy Freqtrade (clone, setup.sh, config, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
+| `update` | Update Freqtrade to latest version | None |
 | `status` | Process status | None |
 | `start` | Start stopped process | None |
 | `stop` | Stop process | None |
@@ -504,7 +505,7 @@ The `open` action automatically:
 
 **Deploy defaults to dry-run mode** (simulated trading, no real money). Pass `{"dry_run":false}` for live trading.
 
-**IMPORTANT: NEVER use Docker for Freqtrade.** The deploy script uses pip + venv. If `pip install freqtrade` fails, the script auto-installs system dependencies (TA-Lib, HDF5) first. Do NOT fall back to Docker, do NOT write custom install scripts, do NOT suggest Docker as an alternative. Just run `node scripts/ft-deploy.mjs deploy` — it handles everything.
+**IMPORTANT: NEVER use Docker for Freqtrade.** The deploy script uses `git clone` + `setup.sh -i` (official Freqtrade installation method). Do NOT fall back to Docker, do NOT write custom install scripts, do NOT try `pip install freqtrade` directly. Just run `node scripts/ft-deploy.mjs deploy` — it handles everything.
 
 ---
 
@@ -571,16 +572,16 @@ node scripts/ft-deploy.mjs deploy '{"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}'
 ```
 
 This automatically:
-1. Installs system dependencies (TA-Lib, HDF5) based on platform (macOS: Homebrew, Linux: apt + compile)
-2. Creates a Python venv at `~/.freqtrade/venv`
-3. Installs Freqtrade via pip
+1. Ensures Python 3.11+ is available (auto-installs via brew if needed on macOS)
+2. Clones Freqtrade repo to `~/.freqtrade/source/`
+3. Runs official `setup.sh -i` (installs TA-Lib, creates venv, installs all dependencies)
 4. Creates config from exchange keys in `.env`
 5. Includes a sample RSI+EMA strategy (pure pandas, no TA-Lib import needed)
 6. Starts Freqtrade as a background process with API server
 7. Writes `FREQTRADE_URL`, `FREQTRADE_USERNAME`, `FREQTRADE_PASSWORD` to `.env`
 8. Ready to use via `ft.mjs` and `ft-dev.mjs`
 
-**Prerequisites:** Python 3 with venv and pip. Exchange API keys must be in `.env`. System dependencies are auto-installed — do NOT install them manually or use Docker.
+**Prerequisites:** Python 3.11+ and git. Exchange API keys must be in `.env`. Everything else is auto-installed — do NOT install manually or use Docker.
 
 ### User Journey
 

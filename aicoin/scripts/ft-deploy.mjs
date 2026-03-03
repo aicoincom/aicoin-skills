@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Freqtrade One-Click Deployment via pip + venv (no Docker)
-// Auto-installs system dependencies (TA-Lib, HDF5) based on platform
+// Freqtrade One-Click Deployment via git clone + setup.sh (official method)
 // Reads exchange keys from .env, creates config, starts as background process
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -33,7 +32,8 @@ function loadEnv() {
 loadEnv();
 
 const FT_DIR = resolve(process.env.HOME || '', '.freqtrade');
-const VENV_DIR = resolve(FT_DIR, 'venv');
+const SRC_DIR = resolve(FT_DIR, 'source');
+const VENV_DIR = resolve(SRC_DIR, '.venv');
 const USER_DATA = resolve(FT_DIR, 'user_data');
 const STRAT_DIR = resolve(USER_DATA, 'strategies');
 const CONFIG_PATH = resolve(USER_DATA, 'config.json');
@@ -52,135 +52,39 @@ function hasCommand(cmd) {
   try { run(`which ${cmd}`); return true; } catch { return false; }
 }
 
-// Find the best Python — prefer 3.12+ for pre-built wheels (avoid C compilation issues)
+// Find the best Python >= 3.11 (Freqtrade requirement)
 function findPython() {
-  for (const bin of ['python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3']) {
+  for (const bin of ['python3.13', 'python3.12', 'python3.11', 'python3']) {
     try {
       const version = run(`${bin} --version`);
       const match = version.match(/(\d+)\.(\d+)/);
       if (match) {
         const major = Number(match[1]), minor = Number(match[2]);
-        return { bin, major, minor, version };
+        if (major === 3 && minor >= 11) return { bin, major, minor, version };
       }
     } catch {}
   }
   return null;
 }
 
-// On macOS, ensure Python 3.10+ is available (3.9 lacks pre-built wheels for tables/PyTables)
+// Ensure Python 3.11+ is available (Freqtrade requirement)
 function ensureModernPython() {
-  const py = findPython();
-  if (!py) throw new Error('Python 3 not found. Install: brew install python@3.12');
+  let py = findPython();
+  if (py) return py;
 
-  if (process.platform === 'darwin' && py.minor < 10) {
-    console.error(`Found ${py.version} — too old for pre-built packages. Installing Python 3.12...`);
-    const brewEnv = { ...process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' };
-    try {
-      run('brew install python@3.12', { timeout: 300000, env: brewEnv });
-      return findPython(); // re-detect after install
-    } catch (e) {
-      throw new Error(`Failed to install Python 3.12: ${e.message}\nManual fix: HOMEBREW_NO_AUTO_UPDATE=1 brew install python@3.12`);
-    }
-  }
-  return py;
-}
-
-// ─── System dependency management ───
-
-function hasTALib() {
-  try {
-    if (process.platform === 'darwin') {
-      run('brew list ta-lib 2>/dev/null');
-      return true;
-    } else {
-      // Check for shared library on Linux
-      run('test -f /usr/local/lib/libta_lib.so -o -f /usr/lib/libta_lib.so -o -f /usr/lib/x86_64-linux-gnu/libta_lib.so');
-      return true;
-    }
-  } catch {
-    // Also check ldconfig
-    try { run('ldconfig -p 2>/dev/null | grep libta_lib'); return true; } catch {}
-    return false;
-  }
-}
-
-function installSystemDeps() {
-  const platform = process.platform; // 'darwin' or 'linux'
-
-  if (platform === 'darwin') {
-    // macOS — use Homebrew
+  // No Python 3.11+ found — try to install
+  if (process.platform === 'darwin') {
     if (!hasCommand('brew')) {
       throw new Error('Homebrew not found. Install: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"');
     }
-    // Skip brew auto-update — it can take minutes and cause timeouts
+    console.error('Python 3.11+ not found. Installing Python 3.12 via Homebrew...');
     const brewEnv = { ...process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' };
-
-    if (!hasTALib()) {
-      console.error('Installing TA-Lib via Homebrew...');
-      try {
-        run('brew install ta-lib', { timeout: 300000, env: brewEnv });
-      } catch (e) {
-        throw new Error(`Failed to install TA-Lib: ${e.message}\nManual fix: HOMEBREW_NO_AUTO_UPDATE=1 brew install ta-lib`);
-      }
-    }
-
-    // HDF5 — check separately
-    let hasHDF5 = false;
-    try { run('brew list hdf5 2>/dev/null'); hasHDF5 = true; } catch {}
-    if (!hasHDF5) {
-      console.error('Installing HDF5 via Homebrew...');
-      try {
-        run('brew install hdf5', { timeout: 300000, env: brewEnv });
-      } catch (e) {
-        throw new Error(`Failed to install HDF5: ${e.message}\nManual fix: HOMEBREW_NO_AUTO_UPDATE=1 brew install hdf5`);
-      }
-    }
-  } else if (platform === 'linux') {
-    // Linux — use apt + compile TA-Lib from source if needed
-    const sudo = hasCommand('sudo') ? 'sudo ' : '';
-    try {
-      console.error('Installing build dependencies...');
-      run(`${sudo}apt-get update -qq && ${sudo}apt-get install -y -qq build-essential python3-dev python3-venv python3-pip wget libhdf5-dev`, { timeout: 120000 });
-    } catch {
-      console.error('Warning: apt-get failed. Some build packages may be missing. Continuing...');
-    }
-
-    if (!hasTALib()) {
-      // Try apt package first
-      try {
-        run(`${sudo}apt-get install -y -qq libta-lib-dev`, { timeout: 60000 });
-      } catch {
-        // Compile TA-Lib from source
-        console.error('Compiling TA-Lib from source (this may take 1-2 minutes)...');
-        try {
-          run([
-            'cd /tmp',
-            'wget -q https://sourceforge.net/projects/ta-lib/files/ta-lib/0.4.0/ta-lib-0.4.0-src.tar.gz',
-            'tar xzf ta-lib-0.4.0-src.tar.gz',
-            'cd ta-lib',
-            './configure --prefix=/usr/local',
-            `make -j$(nproc 2>/dev/null || echo 2)`,
-            `${sudo}make install`,
-          ].join(' && '), { timeout: 600000 });
-          try { run(`${sudo}ldconfig`); } catch {}
-        } catch (e) {
-          throw new Error(`Failed to install TA-Lib from source: ${e.message}\nManual install: https://github.com/TA-Lib/ta-lib-python#dependencies`);
-        }
-      }
-    }
+    run('brew install python@3.12', { timeout: 300000, env: brewEnv });
+    py = findPython();
+    if (py) return py;
   }
-}
 
-function checkSystemDeps() {
-  const deps = {};
-  deps.ta_lib = hasTALib();
-  if (process.platform === 'darwin') {
-    try { run('brew list hdf5 2>/dev/null'); deps.hdf5 = true; } catch { deps.hdf5 = false; }
-  } else {
-    try { run('dpkg -l libhdf5-dev 2>/dev/null | grep -q "^ii"'); deps.hdf5 = true; } catch { deps.hdf5 = false; }
-  }
-  deps.all_ok = deps.ta_lib && deps.hdf5;
-  return deps;
+  throw new Error('Python 3.11+ required. Install: brew install python@3.12 (macOS) or apt install python3.12 python3.12-venv (Linux)');
 }
 
 // ─── Exchange & config ───
@@ -275,16 +179,25 @@ function getPid() {
 const actions = {
   check: async () => {
     const checks = {};
-    // Python — prefer 3.10+ for pre-built wheels
+    // Python — needs 3.11+
     const py = findPython();
     checks.python = py ? `${py.version} (${py.bin})` : false;
-    if (py && py.minor < 10 && process.platform === 'darwin') {
-      checks.python_warning = 'Python < 3.10 detected. Deploy will auto-install Python 3.12 for compatibility.';
+    if (!py) {
+      // Check if any python3 exists but too old
+      try {
+        const v = run('python3 --version');
+        checks.python_warning = `${v} found but Freqtrade requires 3.11+. Deploy will auto-install 3.12.`;
+      } catch {}
     }
-    // System dependencies (TA-Lib, HDF5)
-    checks.system_deps = checkSystemDeps();
+    // git
+    checks.git = hasCommand('git');
+    // Freqtrade source
+    checks.source_cloned = existsSync(resolve(SRC_DIR, 'setup.sh'));
     // Freqtrade installed
     checks.freqtrade_installed = existsSync(FT_BIN);
+    if (checks.freqtrade_installed) {
+      try { checks.freqtrade_version = run(`${FT_BIN} --version`); } catch {}
+    }
     // Exchange keys
     const ex = detectExchange();
     checks.exchange = ex ? { name: ex.name, configured: true } : { configured: false };
@@ -293,41 +206,47 @@ const actions = {
     checks.running = !!pid;
     if (pid) checks.pid = pid;
 
-    checks.ready = !!py && checks.exchange?.configured;
+    checks.ready = (!!py || process.platform === 'darwin') && checks.git && checks.exchange?.configured;
     if (!checks.ready) {
       checks.missing = [];
-      if (!py) checks.missing.push('Python 3 not found. Install: brew install python@3.12');
+      if (!py && process.platform !== 'darwin') checks.missing.push('Python 3.11+ not found');
+      if (!checks.git) checks.missing.push('git not found');
       if (!checks.exchange?.configured) checks.missing.push('No exchange API keys in .env');
-    }
-    if (!checks.system_deps.all_ok) {
-      checks.note = 'System dependencies (TA-Lib, HDF5) not found. They will be auto-installed during deploy.';
     }
     return checks;
   },
 
   deploy: async (params = {}) => {
-    // 1. Find best Python (3.10+ for pre-built wheels, auto-installs 3.12 on macOS if needed)
+    // 1. Ensure Python 3.11+ (auto-installs on macOS if needed)
     const py = ensureModernPython();
     console.error(`Using ${py.version} (${py.bin})`);
 
-    // 2. Detect exchange
+    // 2. Ensure git
+    if (!hasCommand('git')) throw new Error('git not found. Install: apt install git (Linux) or xcode-select --install (macOS)');
+
+    // 3. Detect exchange
     const exchangeInfo = detectExchange();
     if (!exchangeInfo) throw new Error('No exchange API keys found in .env');
 
-    // 3. Create directories
+    // 4. Create directories
     mkdirSync(STRAT_DIR, { recursive: true });
 
-    // 4. Install system dependencies (TA-Lib, HDF5) if missing
-    console.error('Checking system dependencies...');
-    installSystemDeps();
-
-    // 5. Create venv + install freqtrade (if not already installed)
+    // 5. Clone + install Freqtrade via official setup.sh
     if (!existsSync(FT_BIN)) {
-      console.error('Creating Python venv and installing Freqtrade (this may take a few minutes)...');
-      run(`${py.bin} -m venv ${VENV_DIR}`);
-      const pip = resolve(VENV_DIR, 'bin', 'pip');
-      run(`${pip} install --upgrade pip wheel setuptools`, { timeout: 120000 });
-      run(`${pip} install freqtrade`, { timeout: 600000 });
+      // Clone repo if not present
+      if (!existsSync(resolve(SRC_DIR, 'setup.sh'))) {
+        console.error('Cloning Freqtrade repository...');
+        run(`git clone https://github.com/freqtrade/freqtrade.git ${SRC_DIR}`, { timeout: 120000 });
+        run(`cd ${SRC_DIR} && git checkout stable`, { timeout: 30000 });
+      }
+
+      // Run official setup.sh (handles TA-Lib, venv, all dependencies)
+      console.error('Running Freqtrade setup.sh (this may take a few minutes)...');
+      run(`cd ${SRC_DIR} && ./setup.sh -i`, { timeout: 600000 });
+
+      if (!existsSync(FT_BIN)) {
+        throw new Error('Freqtrade installation failed. Check output above for errors.');
+      }
     }
 
     // 6. Generate config
@@ -389,6 +308,19 @@ const actions = {
     };
   },
 
+  update: async () => {
+    if (!existsSync(resolve(SRC_DIR, 'setup.sh'))) {
+      return { error: 'Freqtrade not installed. Run deploy first.' };
+    }
+    // Stop if running
+    const pid = getPid();
+    if (pid) { try { process.kill(pid, 'SIGTERM'); } catch {} }
+
+    console.error('Updating Freqtrade...');
+    run(`cd ${SRC_DIR} && ./setup.sh -u`, { timeout: 600000 });
+    return { updated: true, note: 'Run start to restart Freqtrade.' };
+  },
+
   status: async () => {
     const pid = getPid();
     if (!pid) return { running: false };
@@ -407,6 +339,7 @@ const actions = {
 
   start: async (params = {}) => {
     if (getPid()) return { started: false, reason: 'Already running' };
+    if (!existsSync(FT_BIN)) throw new Error('Freqtrade not installed. Run deploy first.');
     if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
     const strategy = params.strategy || 'SampleStrategy';
     run(`nohup ${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
