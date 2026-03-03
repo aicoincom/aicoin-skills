@@ -7,6 +7,8 @@ description: >
   Also use when the user asks for crypto market data: real-time prices, K-lines, funding
   rates, open interest, liquidation data, whale tracking, AI analysis, order flow, news,
   Hyperliquid on-chain data, or Freqtrade bot control.
+  Also use when the user asks to set up automated trading, deploy Freqtrade, backtest
+  strategies, or control a trading bot.
   Scripts auto-load .env — just run them directly. If a script fails due to missing
   credentials, guide the user through the Setup Checklist in SKILL.md.
 metadata:
@@ -42,7 +44,7 @@ grep -c "AICOIN_ACCESS_KEY_ID" ~/.openclaw/workspace/.env 2>/dev/null || echo "0
 
 **Only ask setup questions when the user explicitly requests features that need configuration:**
 - Exchange trading (Binance, OKX, etc.) → needs exchange API keys + `cd <skill-dir>/aicoin && npm install` for ccxt
-- Freqtrade bot control → needs `FREQTRADE_URL`, `FREQTRADE_USERNAME`, `FREQTRADE_PASSWORD`
+- Freqtrade bot → run `ft-deploy.mjs deploy` (auto-configures everything, needs Docker + exchange keys in .env)
 - Proxy access → needs `PROXY_URL`
 
 **Do NOT block the user from running commands. The skill works out of the box with the built-in free key.**
@@ -109,10 +111,10 @@ BINANCE_API_SECRET=xxx
 PROXY_URL=socks5://127.0.0.1:7890
 # Or standard env vars: HTTPS_PROXY=http://127.0.0.1:7890
 
-# Freqtrade — only if needed
-FREQTRADE_URL=http://localhost:8080
-FREQTRADE_USERNAME=freqtrader
-FREQTRADE_PASSWORD=your-password
+# Freqtrade — auto-configured by ft-deploy.mjs, no manual setup needed
+# FREQTRADE_URL=http://localhost:8080
+# FREQTRADE_USERNAME=freqtrader
+# FREQTRADE_PASSWORD=auto-generated
 ```
 
 Or configure in `~/.openclaw/openclaw.json`:
@@ -461,3 +463,160 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 | `locks` | Trade locks | None |
 | `strategy_list` | Strategy list | None |
 | `strategy_get` | Strategy detail | `{"name":"MyStrategy"}` |
+
+---
+
+### scripts/auto-trade.mjs — Automated Trading
+
+Pre-built trading script with configurable strategy. **Use this instead of writing custom scripts.**
+
+Config is stored at `~/.openclaw/workspace/aicoin-trade-config.json`.
+
+| Action | Description | Params |
+|--------|-------------|--------|
+| `setup` | Save trading config | `{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":20,"capital_pct":0.5,"stop_loss_pct":0.025,"take_profit_pct":0.05}` |
+| `analyze` | Analyze market, output signal (no trading) | `{}` or override any config param |
+| `trade` | Analyze + trade if signal is strong enough | `{}` or override any config param |
+| `status` | Show config + balance + positions | `{}` |
+
+**Default config:**
+- Exchange: okx, Symbol: BTC/USDT:USDT (swap)
+- Capital: 50% per trade, Leverage: 20x
+- Stop-loss: 2.5%, Take-profit: 5%
+- Min score: ±2 to trigger trade
+
+**Signal scoring:**
+- Price vs MA20 trend (±1)
+- Volume spike confirmation (±1)
+- Funding rate extreme (±1)
+- OI change + price direction (±1)
+- Score ≥ 2 → LONG, Score ≤ -2 → SHORT, else HOLD
+
+---
+
+### scripts/ft-deploy.mjs — Freqtrade Deployment
+
+**One-click Freqtrade deployment via Docker.** Reads exchange keys from `.env`, generates config, starts container, auto-writes `FREQTRADE_*` vars to `.env`.
+
+| Action | Description | Params |
+|--------|-------------|--------|
+| `check` | Check prerequisites (Docker, exchange keys) | None |
+| `deploy` | Deploy Freqtrade (pull image, create config, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
+| `status` | Container status | None |
+| `start` | Start stopped container | None |
+| `stop` | Stop container | None |
+| `logs` | View container logs | `{"lines":50}` |
+| `remove` | Remove container (preserves config) | None |
+
+**Deploy defaults to dry-run mode** (simulated trading, no real money). Pass `{"dry_run":false}` for live trading.
+
+---
+
+## Automated Trading Guide
+
+When the user asks to set up automated trading, follow this workflow. **Do NOT write custom scripts — use auto-trade.mjs.**
+
+### Quick Setup (3 steps)
+
+```bash
+# 1. Configure strategy params
+node scripts/auto-trade.mjs setup '{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":10,"capital_pct":0.5}'
+
+# 2. Test analysis (no trading)
+node scripts/auto-trade.mjs analyze
+
+# 3. If analysis works, set up recurring execution
+```
+
+### OpenClaw Cron (Recommended)
+
+**Use OpenClaw's built-in cron, NOT system crontab.** This gives the user visibility in the web UI.
+
+Option A — Script-based (lightweight, no agent cost):
+```bash
+openclaw cron add \
+  --name "BTC auto trade" \
+  --every 10m \
+  --session isolated \
+  --message "Run: cd <skill-dir>/aicoin && node scripts/auto-trade.mjs trade. Report the result."
+```
+
+Option B — Agent-driven (smarter, uses AI reasoning):
+```bash
+openclaw cron add \
+  --name "BTC market analysis" \
+  --every 10m \
+  --session isolated \
+  --message "Analyze BTC market using the aicoin skill. Check funding rates, liquidation data, whale positions, and price action. If you see a strong signal, execute a trade. Report your analysis and any trades made."
+```
+
+### When User Asks "帮我自动交易"
+
+1. Ask: which exchange? which coin? how much capital? what leverage?
+2. Run `auto-trade.mjs setup` with their params
+3. Run `auto-trade.mjs analyze` to verify it works
+4. Set up OpenClaw cron with their preferred interval
+5. Done — tell them they can check status anytime
+
+---
+
+## Freqtrade Guide
+
+When the user asks about backtesting, professional strategies, quantitative trading, or deploying a trading bot, guide them to Freqtrade.
+
+**Freqtrade vs auto-trade.mjs:**
+- auto-trade.mjs = simple AI-driven, good for testing, small capital
+- Freqtrade = professional, backtestable, risk-managed, production-grade
+
+### Deployment (One Command)
+
+```bash
+# Check prerequisites first
+node scripts/ft-deploy.mjs check
+
+# Deploy (dry-run mode by default — safe)
+node scripts/ft-deploy.mjs deploy '{"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}'
+```
+
+This automatically:
+1. Pulls Freqtrade Docker image
+2. Creates config from exchange keys in `.env`
+3. Includes a sample RSI+EMA strategy
+4. Starts the container with API server
+5. Writes `FREQTRADE_URL`, `FREQTRADE_USERNAME`, `FREQTRADE_PASSWORD` to `.env`
+6. Ready to use via `ft.mjs` and `ft-dev.mjs`
+
+**Prerequisites:** Docker must be installed. Exchange API keys must be in `.env`.
+
+### User Journey
+
+```
+"帮我部署Freqtrade"
+  → node scripts/ft-deploy.mjs deploy
+  → "已部署，dry-run模式，用模拟资金运行"
+
+"帮我回测BTC策略"
+  → node scripts/ft-dev.mjs backtest_start '{"strategy":"SampleStrategy","timerange":"20250101-20260101","timeframe":"5m"}'
+  → node scripts/ft-dev.mjs backtest_result '{"id":"..."}'
+  → "回测结果: 胜率62%, 最大回撤-8%, 总收益+45%"
+
+"不错，上实盘"
+  → node scripts/ft-deploy.mjs deploy '{"dry_run":false}'
+  → "⚠️ 已切换到实盘模式，使用真实资金"
+
+"今天赚了多少？"
+  → node scripts/ft.mjs profit
+  → node scripts/ft.mjs daily '{"count":7}'
+
+"暂停交易"
+  → node scripts/ft.mjs stop
+```
+
+### When User Mentions These Keywords → Use Freqtrade
+
+- 回测 / backtest → `ft-dev.mjs backtest_start`
+- 量化策略 / strategy → `ft-dev.mjs strategy_list`
+- 部署机器人 / deploy bot → `ft-deploy.mjs deploy`
+- 实盘 / live trading → `ft-deploy.mjs deploy '{"dry_run":false}'`
+- 盈亏 / profit → `ft.mjs profit`
+- 停止机器人 / stop bot → `ft.mjs stop` or `ft-deploy.mjs stop`
