@@ -468,29 +468,23 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 
 ### scripts/auto-trade.mjs — Automated Trading
 
-Pre-built trading script with configurable strategy. **Use this instead of writing custom scripts.**
+Config + execution helper. **The AI agent makes all strategy decisions** — this script only handles config, risk management, and order execution.
 
 Config is stored at `~/.openclaw/workspace/aicoin-trade-config.json`.
 
 | Action | Description | Params |
 |--------|-------------|--------|
 | `setup` | Save trading config | `{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":20,"capital_pct":0.5,"stop_loss_pct":0.025,"take_profit_pct":0.05}` |
-| `analyze` | Analyze market, output signal (no trading) | `{}` or override any config param |
-| `trade` | Analyze + trade if signal is strong enough | `{}` or override any config param |
-| `status` | Show config + balance + positions | `{}` |
+| `status` | Show config + balance + positions + open orders | `{}` |
+| `open` | Open a position (agent decides direction) | `{"direction":"long"}` or `{"direction":"short"}` |
+| `close` | Close current position + cancel orders | `{}` |
 
-**Default config:**
-- Exchange: okx, Symbol: BTC/USDT:USDT (swap)
-- Capital: 50% per trade, Leverage: 20x
-- Stop-loss: 2.5%, Take-profit: 5%
-- Min score: ±2 to trigger trade
-
-**Signal scoring:**
-- Price vs MA20 trend (±1)
-- Volume spike confirmation (±1)
-- Funding rate extreme (±1)
-- OI change + price direction (±1)
-- Score ≥ 2 → LONG, Score ≤ -2 → SHORT, else HOLD
+The `open` action automatically:
+1. Checks balance and market minimums
+2. Calculates position size from config (capital_pct × balance × leverage)
+3. Sets leverage
+4. Places market order
+5. Places stop-loss and take-profit limit orders
 
 ---
 
@@ -514,49 +508,45 @@ Config is stored at `~/.openclaw/workspace/aicoin-trade-config.json`.
 
 ## Automated Trading Guide
 
-When the user asks to set up automated trading, follow this workflow. **Do NOT write custom scripts — use auto-trade.mjs.**
+When the user asks to set up automated trading, follow this workflow. **Do NOT write custom scripts.**
 
-### Quick Setup (3 steps)
+### How It Works
+
+The AI agent is the strategist. On each cycle:
+1. **Fetch data** using existing scripts: `coin.mjs` (funding, OI, liquidation), `market.mjs` (klines, volume), `features.mjs` (whale orders, long/short ratio), `hl-market.mjs` (Hyperliquid data)
+2. **Analyze** the data — trend, momentum, risk signals. Use your own judgment.
+3. **Decide**: open long, open short, close position, or hold
+4. **Execute** via `auto-trade.mjs open '{"direction":"long"}'` — handles position sizing, leverage, stop-loss/take-profit automatically
+
+### Quick Setup
 
 ```bash
-# 1. Configure strategy params
+# 1. Configure risk params
 node scripts/auto-trade.mjs setup '{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":10,"capital_pct":0.5}'
 
-# 2. Test analysis (no trading)
-node scripts/auto-trade.mjs analyze
-
-# 3. If analysis works, set up recurring execution
+# 2. Check status
+node scripts/auto-trade.mjs status
 ```
 
 ### OpenClaw Cron (Recommended)
 
 **Use OpenClaw's built-in cron, NOT system crontab.** This gives the user visibility in the web UI.
 
-Option A — Script-based (lightweight, no agent cost):
 ```bash
 openclaw cron add \
   --name "BTC auto trade" \
   --every 10m \
   --session isolated \
-  --message "Run: cd <skill-dir>/aicoin && node scripts/auto-trade.mjs trade. Report the result."
-```
-
-Option B — Agent-driven (smarter, uses AI reasoning):
-```bash
-openclaw cron add \
-  --name "BTC market analysis" \
-  --every 10m \
-  --session isolated \
-  --message "Analyze BTC market using the aicoin skill. Check funding rates, liquidation data, whale positions, and price action. If you see a strong signal, execute a trade. Report your analysis and any trades made."
+  --message "You are a crypto trader. Use the aicoin skill to: 1) Fetch BTC market data (price, funding rate, OI, whale orders, liquidation). 2) Analyze the data and decide: open long, open short, close, or hold. 3) If trading, run: node scripts/auto-trade.mjs open '{\"direction\":\"long\"}'. 4) Report your analysis briefly."
 ```
 
 ### When User Asks "帮我自动交易"
 
 1. Ask: which exchange? which coin? how much capital? what leverage?
 2. Run `auto-trade.mjs setup` with their params
-3. Run `auto-trade.mjs analyze` to verify it works
+3. Run `auto-trade.mjs status` to verify exchange connection
 4. Set up OpenClaw cron with their preferred interval
-5. Done — tell them they can check status anytime
+5. Done — tell them they can check status anytime via `auto-trade.mjs status`
 
 ---
 
