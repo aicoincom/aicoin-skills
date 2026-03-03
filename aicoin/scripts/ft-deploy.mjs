@@ -79,6 +79,7 @@ function generateConfig(exchangeInfo, apiPassword, params = {}) {
     },
     entry_pricing: { price_side: 'same', use_order_book: true, order_book_top: 1 },
     exit_pricing: { price_side: 'same', use_order_book: true, order_book_top: 1 },
+    pairlists: [{ method: 'StaticPairList' }],
     api_server: {
       enabled: true,
       listen_ip_address: '0.0.0.0',
@@ -337,7 +338,7 @@ class SampleStrategy(IStrategy):
             (dataframe['rsi'] < 30),
             'exit_short'] = 1
         return dataframe
-`.trim() + '\\n';
+`.trim() + '\n';
 
 // ─── CLI ───
 
