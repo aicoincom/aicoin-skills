@@ -43,6 +43,32 @@ grep -c "AICOIN_ACCESS_KEY_ID" ~/.openclaw/workspace/.env 2>/dev/null || echo "0
 
 **Do NOT block the user from running commands. The skill works out of the box with the built-in free key.**
 
+### How to Configure Environment Variables
+
+The `.env` file location is `~/.openclaw/workspace/.env`. When adding new variables:
+
+1. **Check if `.env` already exists:**
+   ```bash
+   test -f ~/.openclaw/workspace/.env && echo "EXISTS" || echo "NOT_FOUND"
+   ```
+
+2. **If EXISTS → append** (do NOT overwrite):
+   ```bash
+   echo 'PROXY_URL=socks5://127.0.0.1:7890' >> ~/.openclaw/workspace/.env
+   ```
+
+3. **If NOT_FOUND → create**:
+   ```bash
+   echo 'PROXY_URL=socks5://127.0.0.1:7890' > ~/.openclaw/workspace/.env
+   ```
+
+4. **If a key already exists and needs updating**, replace the specific line:
+   ```bash
+   sed -i '' 's|^PROXY_URL=.*|PROXY_URL=socks5://127.0.0.1:7890|' ~/.openclaw/workspace/.env
+   ```
+
+**NEVER overwrite the entire `.env` file** — it may contain other credentials the user has already configured.
+
 ### SECURITY: How to Run Scripts
 
 **Scripts auto-load `.env` — NEVER pass credentials inline.** Just run:
