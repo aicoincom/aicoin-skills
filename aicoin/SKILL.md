@@ -378,6 +378,26 @@ Requires `npm install ccxt` and exchange API keys.
 | `open_orders` | Open orders | `{"exchange":"binance","symbol":"BTC/USDT"}` |
 
 #### Trading (API key required)
+
+**Before placing any order, you MUST:**
+1. Run `markets` to get the trading pair's `limits.amount.min` (minimum order size) — do NOT guess or assume minimums
+2. Run `balance` to check available funds
+3. For futures/swap: calculate actual buying power = balance × leverage
+4. Verify: buying power ≥ min order size × current price
+
+Example pre-trade check for BTC/USDT perpetual on OKX:
+```bash
+# Step 1: Check minimum order size
+node scripts/exchange.mjs markets '{"exchange":"okx","market_type":"swap","base":"BTC"}'
+# → look for limits.amount.min (e.g. 0.001 BTC)
+
+# Step 2: Check balance
+node scripts/exchange.mjs balance '{"exchange":"okx"}'
+# → e.g. 7 USDT free
+
+# Step 3: Calculate — 7 USDT × 10x = 70 USDT ÷ $68000 ≈ 0.001 BTC ≥ min → OK to trade
+```
+
 | Action | Description | Params |
 |--------|-------------|--------|
 | `create_order` | Place order | `{"exchange":"binance","symbol":"BTC/USDT","type":"limit","side":"buy","amount":0.01,"price":60000}` |
