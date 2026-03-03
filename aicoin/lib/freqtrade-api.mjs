@@ -1,5 +1,33 @@
 #!/usr/bin/env node
 // Freqtrade REST API client - shared helper
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Auto-load .env files (same logic as aicoin-api.mjs)
+function loadEnv() {
+  const candidates = [
+    resolve(process.cwd(), '.env'),
+    resolve(process.env.HOME || '', '.openclaw', 'workspace', '.env'),
+    resolve(process.env.HOME || '', '.openclaw', '.env'),
+  ];
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+    try {
+      for (const line of readFileSync(file, 'utf-8').split('\n')) {
+        const t = line.trim();
+        if (!t || t.startsWith('#')) continue;
+        const eq = t.indexOf('=');
+        if (eq < 1) continue;
+        const key = t.slice(0, eq).trim();
+        let val = t.slice(eq + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
+        if (!process.env[key]) process.env[key] = val;
+      }
+    } catch {}
+  }
+}
+loadEnv();
+
 const BASE = process.env.FREQTRADE_URL || 'http://localhost:8080';
 const USER = process.env.FREQTRADE_USERNAME || 'freqtrader';
 const PASS = process.env.FREQTRADE_PASSWORD || '';

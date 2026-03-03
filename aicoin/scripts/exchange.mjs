@@ -10,7 +10,7 @@ async function getExchange(id, marketType, skipAuth = false) {
   try {
     ccxt = await import('ccxt');
   } catch {
-    throw new Error('ccxt not installed. Run: npm install -g ccxt');
+    throw new Error('ccxt not installed. Run: cd <skill-dir>/aicoin && npm install');
   }
   const opts = {};
   if (!skipAuth) {

@@ -108,7 +108,7 @@ Or configure in `~/.openclaw/openclaw.json`:
 ### Prerequisites
 
 - **Node.js** — required for all scripts
-- **ccxt** — required only for exchange trading: `npm install -g ccxt`
+- **ccxt** — required only for exchange trading: `cd <skill-dir>/aicoin && npm install`
 
 ## Scripts
 

@@ -1,9 +1,39 @@
 #!/usr/bin/env node
 // AiCoin API client with HMAC signing - shared lib
 import { createHmac, randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+
+// Auto-load .env files (OpenClaw exec may not inject env vars into child processes)
+function loadEnv() {
+  const candidates = [
+    resolve(process.cwd(), '.env'),                           // workspace root
+    resolve(process.env.HOME || '', '.openclaw', 'workspace', '.env'), // OpenClaw workspace
+    resolve(process.env.HOME || '', '.openclaw', '.env'),     // OpenClaw global
+  ];
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+    try {
+      const lines = readFileSync(file, 'utf-8').split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eq = trimmed.indexOf('=');
+        if (eq < 1) continue;
+        const key = trimmed.slice(0, eq).trim();
+        let val = trimmed.slice(eq + 1).trim();
+        // Strip surrounding quotes
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        // Only set if not already defined (env vars take precedence)
+        if (!process.env[key]) process.env[key] = val;
+      }
+    } catch { /* ignore unreadable files */ }
+  }
+}
+loadEnv();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaults = JSON.parse(readFileSync(resolve(__dirname, 'defaults.json'), 'utf-8'));
