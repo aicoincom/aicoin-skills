@@ -6,7 +6,12 @@ import { cli } from '../lib/aicoin-api.mjs';
 const SUPPORTED = ['binance','okx','bybit','bitget','gate','htx','kucoin','mexc','coinbase'];
 
 async function getExchange(id, marketType, skipAuth = false) {
-  const ccxt = await import('ccxt');
+  let ccxt;
+  try {
+    ccxt = await import('ccxt');
+  } catch {
+    throw new Error('ccxt not installed. Run: npm install -g ccxt');
+  }
   const opts = {};
   if (!skipAuth) {
     const pre = id.toUpperCase();
@@ -14,6 +19,11 @@ async function getExchange(id, marketType, skipAuth = false) {
     opts.secret = process.env[`${pre}_API_SECRET`];
     if (process.env[`${pre}_PASSWORD`]) opts.password = process.env[`${pre}_PASSWORD`];
   }
+  // Proxy support: HTTPS_PROXY / HTTP_PROXY / ALL_PROXY
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
+    || process.env.HTTP_PROXY || process.env.http_proxy
+    || process.env.ALL_PROXY || process.env.all_proxy;
+  if (proxy) opts.httpsProxy = proxy;
   if (marketType && marketType !== 'spot') opts.options = { defaultType: marketType };
   const Ex = ccxt.default?.[id] || ccxt[id];
   return new Ex(opts);

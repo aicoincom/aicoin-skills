@@ -8,9 +8,8 @@ metadata:
   openclaw:
     primaryEnv: "AICOIN_ACCESS_KEY_ID"
     requires:
-      env:
-        - "AICOIN_ACCESS_KEY_ID"
-        - "AICOIN_ACCESS_SECRET"
+      bins:
+        - "node"
     homepage: "https://www.aicoin.com/opendata"
     source: "https://github.com/bbx-com/aicoin-skills"
     license: "MIT"
@@ -20,29 +19,61 @@ metadata:
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-## Setup
+## First-Time Setup
 
-A built-in free key is available without configuration (IP rate-limited). For higher limits:
+After installing this skill, **you must ask the user** about their environment before running any action:
 
-1. Visit https://www.aicoin.com/opendata to get an API Key
-2. Set environment variables:
+1. **AiCoin API key** — Required for all data queries. A built-in free key is available (IP rate-limited), but users can get their own at https://www.aicoin.com/opendata for higher limits.
+2. **Exchange trading** — Does the user need CCXT exchange trading (Binance, OKX, etc.)? If yes, ccxt must be installed and exchange API keys configured.
+3. **Freqtrade** — Does the user need Freqtrade bot control? If yes, Freqtrade credentials are needed.
+4. **Proxy** — Does the user need a proxy to access exchanges? If yes, set `HTTPS_PROXY`.
+
+### Environment Variables
+
+Create a `.env` file in the OpenClaw workspace directory (recommended):
+
 ```bash
-export AICOIN_ACCESS_KEY_ID="your-key"
-export AICOIN_ACCESS_SECRET="your-secret"
+# AiCoin API (optional — built-in free key works with IP rate limits)
+AICOIN_ACCESS_KEY_ID=your-key
+AICOIN_ACCESS_SECRET=your-secret
+
+# Exchange trading — only if needed (requires: npm install -g ccxt)
+BINANCE_API_KEY=xxx
+BINANCE_API_SECRET=xxx
+# Supported: BINANCE, OKX, BYBIT, BITGET, GATE, HTX, KUCOIN, MEXC, COINBASE
+# For OKX also set OKX_PASSWORD=xxx
+
+# Proxy for exchange access — only if needed
+HTTPS_PROXY=http://127.0.0.1:7890
+
+# Freqtrade — only if needed
+FREQTRADE_URL=http://localhost:8080
+FREQTRADE_USERNAME=freqtrader
+FREQTRADE_PASSWORD=your-password
 ```
 
-For exchange trading (CCXT), add exchange keys:
-```bash
-export BINANCE_API_KEY="xxx"
-export BINANCE_API_SECRET="xxx"
+Or configure in `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "skills": {
+    "entries": {
+      "aicoin": {
+        "enabled": true,
+        "apiKey": "your-aicoin-access-key-id",
+        "env": {
+          "AICOIN_ACCESS_SECRET": "your-secret"
+        }
+      }
+    }
+  }
+}
 ```
 
-For Freqtrade bot control:
-```bash
-export FREQTRADE_URL="http://localhost:8080"
-export FREQTRADE_USERNAME="freqtrader"
-export FREQTRADE_PASSWORD="your-password"
-```
+### Prerequisites
+
+- **Node.js** — required for all scripts
+- **ccxt** — required only for exchange trading: `npm install -g ccxt`
 
 ## Scripts
 
