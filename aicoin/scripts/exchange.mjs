@@ -168,6 +168,18 @@ cli({
   },
   transfer: async ({ exchange, code, amount, from_account, to_account }) => {
     const ex = await getExchange(exchange);
-    return ex.transfer(code, amount, from_account, to_account);
+    try {
+      return await ex.transfer(code, amount, from_account, to_account);
+    } catch (e) {
+      // OKX unified account: error 58123 means no transfer needed
+      if (exchange === 'okx' && e.message && e.message.includes('58123')) {
+        return {
+          success: false,
+          reason: 'OKX_UNIFIED_ACCOUNT',
+          message: 'OKX 是统一账户，现货和合约共用同一个余额，不需要划转。直接下单即可。',
+        };
+      }
+      throw e;
+    }
   },
 });
