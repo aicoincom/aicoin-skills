@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.16 | **Last Updated:** 2026-03-04
+**Version:** 1.5.17 | **Last Updated:** 2026-03-04
 
 ## Quick Reference — Most Common Commands
 
@@ -48,6 +48,7 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 - `Error: Insufficient balance` → Check balance first with `exchange.mjs balance`, don't auto-adjust order size
 - `Error: API key invalid` → Keys are in `.env`, never pass inline. Check if user configured exchange keys.
 - `Timeout` → Freqtrade operations may take 5+ minutes, increase timeout or use `ft-deploy.mjs` which handles this
+- `Rate limit exceeded` → Wait 1-2 seconds between requests. Use batch queries when possible to reduce API calls.
 
 **Response Format Best Practices:**
 - Use tables for structured data (prices, K-lines, balances)
