@@ -147,6 +147,7 @@ function generateConfig(exchangeInfo, apiPassword, params = {}) {
   const proxyUrl = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
   if (proxyUrl) {
     config.exchange.ccxt_config.proxies = { https: proxyUrl, http: proxyUrl };
+    config.exchange.ccxt_async_config.aiohttp_proxy = proxyUrl;
   }
   return config;
 }
@@ -264,9 +265,11 @@ const actions = {
     const oldPid = getPid();
     if (oldPid) { try { process.kill(oldPid, 'SIGTERM'); } catch {} }
 
-    // 9. Start freqtrade as background process
+    // 9. Start freqtrade as background process (with proxy env vars)
     const strategy = params.strategy || 'SampleStrategy';
-    run(`nohup ${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
+    const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+    run(`nohup ${proxyPrefix}${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
 
     // 10. Wait for startup
     let ready = false;
@@ -342,13 +345,64 @@ const actions = {
     if (!existsSync(FT_BIN)) throw new Error('Freqtrade not installed. Run deploy first.');
     if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
     const strategy = params.strategy || 'SampleStrategy';
-    run(`nohup ${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
+    const proxyUrl = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const proxyPrefix = proxyUrl ? `HTTPS_PROXY=${proxyUrl} HTTP_PROXY=${proxyUrl} ` : '';
+    run(`nohup ${proxyPrefix}${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
     await new Promise(r => setTimeout(r, 3000));
     return { started: true, pid: getPid() };
   },
 
   logs: async ({ lines = 50 } = {}) => {
     try { return { logs: run(`tail -${lines} ${LOG_FILE} 2>/dev/null`) }; } catch { return { logs: 'No log file found' }; }
+  },
+
+  backtest: async (params = {}) => {
+    if (!existsSync(FT_BIN)) throw new Error('Freqtrade not installed. Run deploy first.');
+    if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
+    const strategy = params.strategy || 'SampleStrategy';
+    const timeframe = params.timeframe || '1h';
+    const timerange = params.timerange || '';
+    const timerangeArg = timerange ? ` --timerange ${timerange}` : '';
+
+    const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+
+    // Auto-download historical data first
+    console.error('Downloading historical data...');
+    try {
+      run(
+        `${proxyPrefix}${FT_BIN} download-data --config ${CONFIG_PATH} --timeframe ${timeframe}${timerangeArg} --userdir ${USER_DATA}`,
+        { timeout: 300000 }
+      );
+    } catch (e) {
+      console.error(`Data download warning: ${e.message}`);
+    }
+
+    // Run backtest
+    console.error(`Running backtest: strategy=${strategy}, timeframe=${timeframe}${timerange ? `, timerange=${timerange}` : ''}...`);
+    const output = run(
+      `${proxyPrefix}${FT_BIN} backtesting --config ${CONFIG_PATH} --strategy ${strategy} --timeframe ${timeframe}${timerangeArg} --userdir ${USER_DATA}`,
+      { timeout: 600000 }
+    );
+    return { strategy, timeframe, timerange: timerange || 'all available', output };
+  },
+
+  download_data: async (params = {}) => {
+    if (!existsSync(FT_BIN)) throw new Error('Freqtrade not installed. Run deploy first.');
+    if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
+    const timeframe = params.timeframe || '1h';
+    const timerange = params.timerange || '';
+    const timerangeArg = timerange ? ` --timerange ${timerange}` : '';
+
+    const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+
+    console.error(`Downloading data: timeframe=${timeframe}${timerange ? `, timerange=${timerange}` : ''}...`);
+    const output = run(
+      `${proxyPrefix}${FT_BIN} download-data --config ${CONFIG_PATH} --timeframe ${timeframe}${timerangeArg} --userdir ${USER_DATA}`,
+      { timeout: 300000 }
+    );
+    return { timeframe, timerange: timerange || 'all available', output };
   },
 
   remove: async () => {

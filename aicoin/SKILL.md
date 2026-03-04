@@ -496,6 +496,7 @@ The `open` action automatically:
 |--------|-------------|--------|
 | `check` | Check prerequisites (Python 3.11+, git, exchange keys) | None |
 | `deploy` | Deploy Freqtrade (clone, setup.sh, config, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
+| `backtest` | Run backtest (no running process needed) | `{"strategy":"SampleStrategy","timeframe":"1h","timerange":"20250101-20260301"}` |
 | `update` | Update Freqtrade to latest version | None |
 | `status` | Process status | None |
 | `start` | Start stopped process | None |
@@ -591,8 +592,7 @@ This automatically:
   → "已部署，dry-run模式，用模拟资金运行"
 
 "帮我回测BTC策略"
-  → node scripts/ft-dev.mjs backtest_start '{"strategy":"SampleStrategy","timerange":"20250101-20260101","timeframe":"5m"}'
-  → node scripts/ft-dev.mjs backtest_result '{"id":"..."}'
+  → node scripts/ft-deploy.mjs backtest '{"strategy":"SampleStrategy","timeframe":"1h","timerange":"20250101-20260301"}'
   → "回测结果: 胜率62%, 最大回撤-8%, 总收益+45%"
 
 "不错，上实盘"
@@ -609,9 +609,12 @@ This automatically:
 
 ### When User Mentions These Keywords → Use Freqtrade
 
-- 回测 / backtest → `ft-dev.mjs backtest_start`
-- 量化策略 / strategy → `ft-dev.mjs strategy_list`
+- 回测 / backtest → `ft-deploy.mjs backtest` (does NOT require Freqtrade to be running)
+- 写策略 / write strategy → Write a `.py` file to `~/.freqtrade/user_data/strategies/`, then `ft-deploy.mjs backtest`
+- 量化策略 / strategy → `ft-dev.mjs strategy_list` (requires running process)
 - 部署机器人 / deploy bot → `ft-deploy.mjs deploy`
 - 实盘 / live trading → `ft-deploy.mjs deploy '{"dry_run":false}'`
 - 盈亏 / profit → `ft.mjs profit`
 - 停止机器人 / stop bot → `ft.mjs stop` or `ft-deploy.mjs stop`
+
+**IMPORTANT: For backtesting, use `ft-deploy.mjs backtest`. Do NOT write custom Python backtest scripts. The Freqtrade backtester is production-grade with proper slippage, fees, and position sizing simulation.**
