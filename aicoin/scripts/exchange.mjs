@@ -126,6 +126,10 @@ cli({
     for (const [ccy, amt] of Object.entries(bal.total || {})) {
       if (Number(amt) > 0) summary[ccy] = { free: bal.free[ccy], used: bal.used[ccy], total: bal.total[ccy] };
     }
+    // OKX unified account note
+    if (exchange === 'okx') {
+      summary._note = 'OKX统一账户：现货和合约共用同一余额，无需划转。';
+    }
     return summary;
   },
   positions: async ({ exchange, symbols, market_type }) => {
@@ -167,19 +171,15 @@ cli({
     return ex.setMarginMode(margin_mode, symbol);
   },
   transfer: async ({ exchange, code, amount, from_account, to_account }) => {
-    const ex = await getExchange(exchange);
-    try {
-      return await ex.transfer(code, amount, from_account, to_account);
-    } catch (e) {
-      // OKX unified account: error 58123 means no transfer needed
-      if (exchange === 'okx' && e.message && e.message.includes('58123')) {
-        return {
-          success: false,
-          reason: 'OKX_UNIFIED_ACCOUNT',
-          message: 'OKX 是统一账户，现货和合约共用同一个余额，不需要划转。直接下单即可。',
-        };
-      }
-      throw e;
+    // OKX unified account: no transfer needed
+    if (exchange === 'okx') {
+      return {
+        success: false,
+        reason: 'OKX_UNIFIED_ACCOUNT',
+        message: 'OKX 是统一账户，现货和合约共用同一个余额，不需要划转。直接下单即可。',
+      };
     }
+    const ex = await getExchange(exchange);
+    return ex.transfer(code, amount, from_account, to_account);
   },
 });
