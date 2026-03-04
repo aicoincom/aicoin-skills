@@ -265,6 +265,7 @@ All scripts follow: `node scripts/<name>.mjs <action> [json-params]`
 | Action | Description | Params |
 |--------|-------------|--------|
 | `search` | Search newsflash by keyword | `{"word":"bitcoin","page":"1","size":"20"}` |
+| `list` | Newsflash list with filters | `{"pagesize":"20","lan":"cn","date_mode":"range","start_date":"2025-03-01","end_date":"2025-03-04"}` |
 | `detail` | Newsflash full content | `{"flash_id":"123456"}` |
 
 ---
