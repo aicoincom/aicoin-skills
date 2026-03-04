@@ -433,6 +433,11 @@ Requires `npm install ccxt` and exchange API keys.
 
 #### Trading (API key required)
 
+**🚨 SAFETY RULES — MANDATORY for ALL trading operations:**
+1. **NEVER execute a buy/sell/trade without explicit user confirmation.** Always show the order details and ask "确认下单？" BEFORE calling `create_order`.
+2. **NEVER sell or close the user's existing positions** unless the user specifically asks to sell/close.
+3. **NEVER write custom CCXT, Python, or curl code** to interact with exchanges. ALL exchange operations MUST go through `exchange.mjs`.
+
 **⚠️ CRITICAL — `amount` units differ between spot and futures:**
 - **Spot**: `amount` is in **base currency** (e.g., `amount: 0.01` = 0.01 BTC)
 - **Futures/Swap**: `amount` is in **contracts** (e.g., `amount: 1` = 1 contract). Get `contractSize` from `markets` to convert.
@@ -479,7 +484,7 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 | `transfer` | Transfer funds | `{"exchange":"binance","code":"USDT","amount":100,"from_account":"spot","to_account":"future"}` |
 
 **Notes on `transfer`:**
-- **OKX unified account**: OKX uses a unified trading account — spot and derivatives share the same balance. No transfer needed. If transfer returns error 58123, tell the user their account is unified and balance is already shared.
+- **OKX unified account (重要)**: OKX uses a **unified trading account** — spot and derivatives share the SAME balance. **Do NOT ask the user to transfer funds between accounts.** If transfer returns error 58123, tell the user: "你的 OKX 是统一账户，现货和合约共用同一个余额，不需要划转。" Do NOT suggest manual transfer in the app.
 - **Binance**: Requires explicit transfer between spot/futures accounts.
 
 ---

@@ -2,6 +2,11 @@
 // CCXT Exchange Trading CLI
 // Requires: npm install ccxt
 import { cli } from '../lib/aicoin-api.mjs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+const __dir = dirname(fileURLToPath(import.meta.url));
 
 const SUPPORTED = ['binance','okx','bybit','bitget','gate','htx','kucoin','mexc','coinbase'];
 
@@ -32,7 +37,13 @@ async function getExchange(id, marketType, skipAuth = false) {
   try {
     ccxt = await import('ccxt');
   } catch {
-    throw new Error('ccxt not installed. Run: cd <skill-dir>/aicoin && npm install');
+    // Auto-install ccxt if missing
+    try {
+      execSync('npm install --omit=dev', { cwd: resolve(__dir, '..'), stdio: 'pipe', timeout: 60000 });
+      ccxt = await import('ccxt');
+    } catch {
+      throw new Error('ccxt not installed. Run: cd <skill-dir>/aicoin && npm install');
+    }
   }
   const opts = {};
   if (!skipAuth) {
