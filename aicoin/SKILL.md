@@ -466,11 +466,15 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 
 | Action | Description | Params |
 |--------|-------------|--------|
-| `create_order` | Place order | `{"exchange":"binance","symbol":"BTC/USDT","type":"limit","side":"buy","amount":0.01,"price":60000}` |
-| `cancel_order` | Cancel order | `{"exchange":"binance","symbol":"BTC/USDT","order_id":"xxx"}` |
-| `set_leverage` | Set leverage | `{"exchange":"binance","symbol":"BTC/USDT","leverage":10}` |
-| `set_margin_mode` | Margin mode | `{"exchange":"binance","symbol":"BTC/USDT","margin_mode":"cross"}` |
+| `create_order` | Place order | Spot: `{"exchange":"okx","symbol":"BTC/USDT","type":"market","side":"buy","amount":0.001}` (amount in BTC). Swap: `{"exchange":"okx","symbol":"BTC/USDT:USDT","type":"market","side":"buy","amount":1,"market_type":"swap"}` (amount in contracts) |
+| `cancel_order` | Cancel order | `{"exchange":"okx","symbol":"BTC/USDT","order_id":"xxx"}` |
+| `set_leverage` | Set leverage | `{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":10,"market_type":"swap"}` |
+| `set_margin_mode` | Margin mode | `{"exchange":"okx","symbol":"BTC/USDT:USDT","margin_mode":"cross","market_type":"swap"}` |
 | `transfer` | Transfer funds | `{"exchange":"binance","code":"USDT","amount":100,"from_account":"spot","to_account":"future"}` |
+
+**Notes on `transfer`:**
+- **OKX unified account**: OKX uses a unified trading account — spot and derivatives share the same balance. No transfer needed. If transfer returns error 58123, tell the user their account is unified and balance is already shared.
+- **Binance**: Requires explicit transfer between spot/futures accounts.
 
 ---
 
