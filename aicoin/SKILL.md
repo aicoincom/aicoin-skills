@@ -260,6 +260,18 @@ All scripts follow: `node scripts/<name>.mjs <action> [json-params]`
 
 ---
 
+### scripts/newsflash.mjs — Newsflash (OpenData)
+
+| Action | Description | Params |
+|--------|-------------|--------|
+| `search` | Search newsflash by keyword | `{"word":"bitcoin","page":"1","size":"20"}` |
+| `list` | Newsflash list with filters | `{"pagesize":"20","lan":"cn","only_important":"1","tab":"0"}` |
+| `detail` | Newsflash full content | `{"flash_id":"123456"}` |
+
+Advanced list params: `last_id`, `platform_show` (aicoin/twitter), `date_mode` (normal/jump/range), `jump_to_date` (YYYY-MM-DD), `start_date`, `end_date`.
+
+---
+
 ### scripts/features.mjs — Features & Signals
 
 #### Market Overview
