@@ -68,7 +68,12 @@ export async function apiGet(path, params = {}) {
     }
     throw new Error(`API ${res.status}: ${text}${hint}`);
   }
-  return res.json();
+  const json = await res.json();
+  // Check for API-level errors (HTTP 200 but success=false)
+  if (json.success === false && json.errorCode === 304) {
+    json._note = 'This endpoint requires a paid AiCoin API subscription. The free key does not have access.';
+  }
+  return json;
 }
 
 export async function apiPost(path, body = {}) {

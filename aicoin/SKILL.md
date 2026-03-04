@@ -20,7 +20,8 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 | **BTC price** | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'` |
 | **Multi price** | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin,ethereum,solana"}'` |
 | **K-line** | `node scripts/market.mjs kline '{"symbol":"btcusdt:okex","period":"3600","size":"100"}'` |
-| **Funding rate** | `node scripts/coin.mjs funding_rate '{"symbol":"BTC","interval":"8h"}'` |
+| **Funding rate** | `node scripts/coin.mjs funding_rate '{"symbol":"BTC"}'` (BTC only, 8h default) |
+| **Funding rate (other coins)** | `node scripts/exchange.mjs funding_rate '{"exchange":"binance","symbol":"ETH/USDT:USDT"}'` |
 | **Open interest** | `node scripts/coin.mjs open_interest '{"symbol":"BTC","interval":"15m"}'` |
 | **Long/short ratio** | `node scripts/features.mjs ls_ratio` |
 | **Whale orders** | `node scripts/features.mjs big_orders '{"symbol":"btcswapusdt:binance"}'` |

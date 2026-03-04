@@ -46,9 +46,16 @@ cli({
     if (language) body.language = language;
     return apiPost('/api/v2/content/ai-coins', body);
   },
-  // coin_funding_rate
+  // coin_funding_rate (AiCoin API only supports BTC)
   funding_rate: ({ symbol, interval = '8h', weighted, limit = '100', start_time, end_time }) => {
     const resolved = resolveSymbol(symbol);
+    // Check if resolved symbol is BTC-related
+    if (resolved && !resolved.toLowerCase().startsWith('btc')) {
+      return Promise.resolve({
+        code: '0', msg: 'success', data: [],
+        _note: `AiCoin funding_rate API only supports BTC. For ${symbol} funding rate, use: node scripts/exchange.mjs funding_rate '{"exchange":"binance","symbol":"${symbol}/USDT:USDT"}'`
+      });
+    }
     const p = { symbol: resolved, interval, limit };
     if (start_time) p.start_time = start_time;
     if (end_time) p.end_time = end_time;

@@ -184,6 +184,10 @@ cli({
     }
     return order;
   },
+  funding_rate: async ({ exchange, symbol, market_type }) => {
+    const ex = await getExchange(exchange, market_type || 'swap');
+    return ex.fetchFundingRate(symbol);
+  },
   cancel_order: async ({ exchange, symbol, order_id, market_type }) => {
     const ex = await getExchange(exchange, market_type);
     if (order_id) return ex.cancelOrder(order_id, symbol);
