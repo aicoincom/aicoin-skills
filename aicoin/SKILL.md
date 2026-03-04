@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.22 | **Last Updated:** 2026-03-04
+**Version:** 1.5.23 | **Last Updated:** 2026-03-04
 
 **Data Sources:** AiCoin aggregates data from 200+ exchanges. Price data is real-time, K-lines updated every second, funding rates every 8h.
 
@@ -65,6 +65,7 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 - `Error: API key invalid` → Keys are in `.env`, never pass inline. Check if user configured exchange keys.
 - `Timeout` → Freqtrade operations may take 5+ minutes, increase timeout or use `ft-deploy.mjs` which handles this
 - `Rate limit exceeded` → Wait 1-2 seconds between requests. Use batch queries when possible to reduce API calls.
+- `Script not found` → Ensure you're in the aicoin skill directory. Use `exec` tool with full path to script.
 
 **Response Format Best Practices:**
 - Use tables for structured data (prices, K-lines, balances)
