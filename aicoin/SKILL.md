@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.10 | **Last Updated:** 2026-03-04
+**Version:** 1.5.11 | **Last Updated:** 2026-03-04
 
 ## Quick Reference — Most Common Commands
 
@@ -40,6 +40,12 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 | **Backtest** | `node scripts/ft-deploy.mjs backtest '{"strategy":"SampleStrategy","timerange":"20250101-"}'` ⚠️ MUST use this script |
 
 **Symbol shortcuts:** `BTC`, `ETH`, `SOL`, `DOGE`, `XRP` auto-resolve to AiCoin format (e.g. `btcswapusdt:binance`) in coin.mjs. For exchange.mjs, use CCXT format: `BTC/USDT`, `BTC/USDT:USDT` (swap).
+
+**Common Errors & Solutions:**
+- `Error: Invalid symbol` → Check symbol format (AiCoin: `btcusdt:okex`, CCXT: `BTC/USDT`)
+- `Error: Insufficient balance` → Check balance first with `exchange.mjs balance`, don't auto-adjust order size
+- `Error: API key invalid` → Keys are in `.env`, never pass inline. Check if user configured exchange keys.
+- `Timeout` → Freqtrade operations may take 5+ minutes, increase timeout or use `ft-deploy.mjs` which handles this
 
 ## Setup Checklist
 
