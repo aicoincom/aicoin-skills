@@ -148,6 +148,8 @@ function generateConfig(exchangeInfo, apiPassword, params = {}) {
   if (proxyUrl) {
     config.exchange.ccxt_config.proxies = { https: proxyUrl, http: proxyUrl };
     config.exchange.ccxt_async_config.aiohttp_proxy = proxyUrl;
+    // HTTP proxies don't support WebSocket — disable WS to force REST polling
+    config.exchange.enable_ws = false;
   }
   return config;
 }
@@ -268,7 +270,7 @@ const actions = {
     // 9. Start freqtrade as background process (with proxy env vars)
     const strategy = params.strategy || 'SampleStrategy';
     const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+    const proxyPrefix = proxyEnv ? `env HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
     run(`nohup ${proxyPrefix}${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
 
     // 10. Wait for startup
@@ -346,7 +348,7 @@ const actions = {
     if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
     const strategy = params.strategy || 'SampleStrategy';
     const proxyUrl = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-    const proxyPrefix = proxyUrl ? `HTTPS_PROXY=${proxyUrl} HTTP_PROXY=${proxyUrl} ` : '';
+    const proxyPrefix = proxyUrl ? `env HTTPS_PROXY=${proxyUrl} HTTP_PROXY=${proxyUrl} ` : '';
     run(`nohup ${proxyPrefix}${FT_BIN} trade --config ${CONFIG_PATH} --strategy ${strategy} --userdir ${USER_DATA} > ${LOG_FILE} 2>&1 & echo $! > ${PID_FILE}`);
     await new Promise(r => setTimeout(r, 3000));
     return { started: true, pid: getPid() };
@@ -365,7 +367,7 @@ const actions = {
     const timerangeArg = timerange ? ` --timerange ${timerange}` : '';
 
     const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+    const proxyPrefix = proxyEnv ? `env HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
 
     // Auto-download historical data first
     console.error('Downloading historical data...');
@@ -395,7 +397,7 @@ const actions = {
     const timerangeArg = timerange ? ` --timerange ${timerange}` : '';
 
     const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-    const proxyPrefix = proxyEnv ? `HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+    const proxyPrefix = proxyEnv ? `env HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
 
     console.error(`Downloading data: timeframe=${timeframe}${timerange ? `, timerange=${timerange}` : ''}...`);
     const output = run(

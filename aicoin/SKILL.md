@@ -519,6 +519,8 @@ The `open` action automatically:
 
 **IMPORTANT: NEVER use Docker for Freqtrade.** The deploy script uses `git clone` + `setup.sh -i` (official Freqtrade installation method). Do NOT fall back to Docker, do NOT write custom install scripts, do NOT try `pip install freqtrade` directly. Just run `node scripts/ft-deploy.mjs deploy` — it handles everything.
 
+**IMPORTANT: Do NOT manually edit Freqtrade config files, do NOT manually run `freqtrade trade` commands, do NOT manually `source .venv/bin/activate`.** Always use `ft-deploy.mjs` actions. If deploy fails, check logs with `ft-deploy.mjs logs` and report the error — do NOT attempt manual workarounds.
+
 ---
 
 ## Automated Trading Guide
