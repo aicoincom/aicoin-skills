@@ -8,6 +8,8 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
+**Version:** 1.5.8 | **Last Updated:** 2026-03-04
+
 ## Quick Reference — Most Common Commands
 
 > **Run all scripts from the aicoin skill directory.** Use `exec` tool, NOT `process`.
