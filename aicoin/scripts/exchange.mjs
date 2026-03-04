@@ -180,6 +180,18 @@ cli({
       };
     }
     const ex = await getExchange(exchange);
-    return ex.transfer(code, amount, from_account, to_account);
+    // Normalize account names for CCXT (lowercase)
+    const from = from_account.toLowerCase();
+    const to = to_account.toLowerCase();
+    try {
+      return await ex.transfer(code, amount, from, to);
+    } catch (err) {
+      const msg = err.message || String(err);
+      // Binance -1002: API key lacks Universal Transfer permission
+      if (exchange === 'binance' && msg.includes('-1002')) {
+        throw new Error(`Binance 划转失败 (错误 -1002): API Key 没有万向划转(Universal Transfer)权限。请在 Binance API 管理后台开启「Permits Universal Transfer」权限。原始错误: ${msg}`);
+      }
+      throw err;
+    }
   },
 });
