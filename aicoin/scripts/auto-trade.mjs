@@ -63,10 +63,11 @@ cli({
       throw new Error('Missing "direction": must be "long" or "short"');
     }
 
-    // 1. Check balance
+    // 1. Check balance (derive quote currency from symbol)
     const bal = ex('balance', { exchange: cfg.exchange, market_type: cfg.market_type });
-    const usdt = Number(bal.USDT?.free || 0);
-    if (usdt < 1) throw new Error(`Insufficient balance: ${usdt} USDT`);
+    const quote = cfg.symbol.split('/')[1]?.split(':')[0] || 'USDT';
+    const available = Number(bal[quote]?.free || 0);
+    if (available < 1) throw new Error(`Insufficient ${quote} balance: ${available}`);
 
     // 2. Get current price
     const ticker = ex('ticker', { exchange: cfg.exchange, symbol: cfg.symbol, market_type: cfg.market_type });
@@ -81,7 +82,7 @@ cli({
     const amountMin = mkt?.limits?.amount?.min || amountStep;
 
     // 4. Calculate position size (convert base amount to contracts for futures)
-    const capital = usdt * cfg.capital_pct;
+    const capital = available * cfg.capital_pct;
     const positionValue = capital * cfg.leverage;
     const amountInBase = positionValue / price;
     // For futures/swap, CCXT amount is in contracts; convert using contractSize
@@ -102,14 +103,14 @@ cli({
       amount, market_type: cfg.market_type,
     });
 
-    // 7. Place stop-loss & take-profit
+    // 7. Place stop-loss & take-profit (conditional orders with reduceOnly)
     const slPrice = direction === 'long' ? price * (1 - cfg.stop_loss_pct) : price * (1 + cfg.stop_loss_pct);
     const tpPrice = direction === 'long' ? price * (1 + cfg.take_profit_pct) : price * (1 - cfg.take_profit_pct);
     const closeSide = direction === 'long' ? 'sell' : 'buy';
 
     let sl, tp;
-    try { sl = ex('create_order', { exchange: cfg.exchange, symbol: cfg.symbol, type: 'limit', side: closeSide, amount, price: Number(slPrice.toPrecision(6)), market_type: cfg.market_type }); } catch (e) { sl = { error: e.message }; }
-    try { tp = ex('create_order', { exchange: cfg.exchange, symbol: cfg.symbol, type: 'limit', side: closeSide, amount, price: Number(tpPrice.toPrecision(6)), market_type: cfg.market_type }); } catch (e) { tp = { error: e.message }; }
+    try { sl = ex('create_order', { exchange: cfg.exchange, symbol: cfg.symbol, type: 'market', side: closeSide, amount, market_type: cfg.market_type, params: { stopLossPrice: Number(slPrice.toPrecision(6)), reduceOnly: true } }); } catch (e) { sl = { error: e.message }; }
+    try { tp = ex('create_order', { exchange: cfg.exchange, symbol: cfg.symbol, type: 'market', side: closeSide, amount, market_type: cfg.market_type, params: { takeProfitPrice: Number(tpPrice.toPrecision(6)), reduceOnly: true } }); } catch (e) { tp = { error: e.message }; }
 
     return {
       direction, amount,

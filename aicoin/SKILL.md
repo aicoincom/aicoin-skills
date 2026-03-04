@@ -8,6 +8,32 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
+## Quick Reference — Most Common Commands
+
+> **Run all scripts from the aicoin skill directory.** Use `exec` tool, NOT `process`.
+> **API keys are pre-configured.** Do NOT ask the user for keys. Do NOT run `env`/`printenv`.
+> **Do NOT use curl, web_fetch, or browser** for crypto data. Always use these scripts.
+
+| Task | Command |
+|------|---------|
+| **BTC price** | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'` |
+| **Multi price** | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin,ethereum,solana"}'` |
+| **K-line** | `node scripts/market.mjs kline '{"symbol":"btcusdt:okex","period":"3600","size":"100"}'` |
+| **Funding rate** | `node scripts/coin.mjs funding_rate '{"symbol":"BTC","interval":"8h"}'` |
+| **Open interest** | `node scripts/coin.mjs open_interest '{"symbol":"BTC","interval":"15m"}'` |
+| **Long/short ratio** | `node scripts/features.mjs ls_ratio` |
+| **Whale orders** | `node scripts/features.mjs big_orders '{"symbol":"btcswapusdt:binance"}'` |
+| **News flash** | `node scripts/news.mjs newsflash '{"language":"cn"}'` |
+| **HL whale** | `node scripts/hl-market.mjs whale_positions '{"coin":"BTC"}'` |
+| **Balance** | `node scripts/exchange.mjs balance '{"exchange":"okx"}'` |
+| **Ticker** | `node scripts/exchange.mjs ticker '{"exchange":"binance","symbol":"BTC/USDT"}'` |
+| **Orderbook** | `node scripts/exchange.mjs orderbook '{"exchange":"binance","symbol":"BTC/USDT"}'` |
+| **Buy/Sell** | `node scripts/exchange.mjs create_order '{"exchange":"okx","symbol":"BTC/USDT","type":"market","side":"buy","amount":0.001}'` |
+| **Positions** | `node scripts/exchange.mjs positions '{"exchange":"okx","market_type":"swap"}'` |
+| **Market list** | `node scripts/exchange.mjs markets '{"exchange":"binance","base":"BTC"}'` |
+
+**Symbol shortcuts:** `BTC`, `ETH`, `SOL`, `DOGE`, `XRP` auto-resolve to AiCoin format (e.g. `btcswapusdt:binance`) in coin.mjs. For exchange.mjs, use CCXT format: `BTC/USDT`, `BTC/USDT:USDT` (swap).
+
 ## Setup Checklist
 
 **Scripts auto-load `.env` files** from these locations (earlier paths take priority):
@@ -25,7 +51,7 @@ grep -c "AICOIN_ACCESS_KEY_ID" ~/.openclaw/workspace/.env 2>/dev/null || echo "0
 - If output is `0` → **No AiCoin key, but the built-in free key works automatically. Just run scripts.**
 
 **Only ask setup questions when the user explicitly requests features that need configuration:**
-- Exchange trading (Binance, OKX, etc.) → needs exchange API keys + `cd <skill-dir>/aicoin && npm install` for ccxt
+- Exchange trading (Binance, OKX, etc.) → needs exchange API keys + `cd` into the aicoin skill directory and run `npm install` for ccxt
 - Freqtrade bot → run `ft-deploy.mjs deploy` (auto-configures everything, needs Python 3 + exchange keys in .env)
 - Proxy access → needs `PROXY_URL`
 
@@ -70,6 +96,12 @@ node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'
 # WRONG! DO NOT DO THIS!
 AICOIN_ACCESS_KEY_ID=xxx node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'
 ```
+
+**Additional security rules:**
+- **NEVER run `env`, `printenv`, or `env | grep`** — leaks gateway tokens and API secrets into session logs
+- **NEVER use curl to call exchange REST APIs directly** (Binance, OKX, etc.) — use `exchange.mjs` which handles auth, broker tags, and proxy
+- **NEVER use web_fetch, web_search, or browser** for crypto data — always use the scripts in this skill
+- **NEVER fabricate or guess data from memory** — always fetch real-time data via scripts
 
 If a script fails due to missing env vars, guide the user to update their `.env` file instead of injecting variables into the command.
 
@@ -141,7 +173,7 @@ Or configure in `~/.openclaw/openclaw.json`:
 ### Prerequisites
 
 - **Node.js** — required for all scripts
-- **ccxt** — required only for exchange trading: `cd <skill-dir>/aicoin && npm install`
+- **ccxt** — required only for exchange trading. Run `npm install` in the aicoin skill directory to install.
 
 ## Scripts
 

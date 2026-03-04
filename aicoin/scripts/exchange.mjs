@@ -49,8 +49,10 @@ async function getExchange(id, marketType, skipAuth = false) {
   if (!skipAuth) {
     const pre = id.toUpperCase();
     opts.apiKey = process.env[`${pre}_API_KEY`];
-    opts.secret = process.env[`${pre}_API_SECRET`];
-    if (process.env[`${pre}_PASSWORD`]) opts.password = process.env[`${pre}_PASSWORD`];
+    opts.secret = process.env[`${pre}_API_SECRET`] || process.env[`${pre}_SECRET`];
+    if (process.env[`${pre}_PASSWORD`] || process.env[`${pre}_PASSPHRASE`]) {
+      opts.password = process.env[`${pre}_PASSWORD`] || process.env[`${pre}_PASSPHRASE`];
+    }
   }
   // Proxy support: PROXY_URL (MCP-compatible) or HTTPS_PROXY/HTTP_PROXY
   const proxyUrl = process.env.PROXY_URL
@@ -118,13 +120,20 @@ cli({
     const ex = await getExchange(exchange, market_type, true);
     return ex.fetchOHLCV(symbol, timeframe, undefined, limit);
   },
-  balance: async ({ exchange, market_type }) => {
+  balance: async ({ exchange, market_type, show_dust }) => {
     const ex = await getExchange(exchange, market_type);
     const bal = await ex.fetchBalance();
     // Return only non-zero balances for cleaner output
     const summary = {};
     for (const [ccy, amt] of Object.entries(bal.total || {})) {
-      if (Number(amt) > 0) summary[ccy] = { free: bal.free[ccy], used: bal.used[ccy], total: bal.total[ccy] };
+      const total = Number(amt);
+      if (total <= 0) continue;
+      // Filter dust tokens (< $0.01 equivalent) unless show_dust is set
+      // Stablecoins check: if < 0.01, it's dust
+      const isStable = ['USDT','USDC','BUSD','DAI','TUSD','FDUSD'].includes(ccy);
+      if (!show_dust && isStable && total < 0.01) continue;
+      if (!show_dust && !isStable && total < 1e-7) continue;
+      summary[ccy] = { free: bal.free[ccy], used: bal.used[ccy], total: bal.total[ccy] };
     }
     // OKX unified account note
     if (exchange === 'okx') {
@@ -140,9 +149,9 @@ cli({
     const ex = await getExchange(exchange, market_type);
     return ex.fetchOpenOrders(symbol);
   },
-  create_order: async ({ exchange, symbol, type, side, amount, price, market_type }) => {
+  create_order: async ({ exchange, symbol, type, side, amount, price, market_type, params }) => {
     const ex = await getExchange(exchange, market_type);
-    const order = await ex.createOrder(symbol, type, side, amount, price);
+    const order = await ex.createOrder(symbol, type, side, amount, price, params || {});
     // For futures/swap, attach contract size context so callers know actual position
     if (market_type && market_type !== 'spot') {
       try {
