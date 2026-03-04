@@ -13,6 +13,7 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 > **Run all scripts from the aicoin skill directory.** Use `exec` tool, NOT `process`.
 > **API keys are pre-configured.** Do NOT ask the user for keys. Do NOT run `env`/`printenv`.
 > **Do NOT use curl, web_fetch, or browser** for crypto data. Always use these scripts.
+> **🚨 TRADING SAFETY: NEVER place orders without user confirmation. ALWAYS show order details and ask "确认下单？" FIRST. NEVER auto-adjust order size or parameters.**
 
 | Task | Command |
 |------|---------|

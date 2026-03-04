@@ -47,7 +47,7 @@ cli({
     return apiPost('/api/v2/content/ai-coins', body);
   },
   // coin_funding_rate
-  funding_rate: ({ symbol, interval, weighted, limit = '100', start_time, end_time }) => {
+  funding_rate: ({ symbol, interval = '8h', weighted, limit = '100', start_time, end_time }) => {
     const resolved = resolveSymbol(symbol);
     const p = { symbol: resolved, interval, limit };
     if (start_time) p.start_time = start_time;
