@@ -8,9 +8,21 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.19 | **Last Updated:** 2026-03-04
+**Version:** 1.5.20 | **Last Updated:** 2026-03-04
 
 **Data Sources:** AiCoin aggregates data from 200+ exchanges. Price data is real-time, K-lines updated every second, funding rates every 8h.
+
+**Quick Start Examples:**
+```bash
+# Check BTC price
+node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'
+
+# Get 1h K-line
+node scripts/market.mjs kline '{"symbol":"btcusdt:okex","period":"3600","size":"10"}'
+
+# Check balance (requires exchange API keys)
+node scripts/exchange.mjs balance '{"exchange":"okx"}'
+```
 
 ## Quick Reference — Most Common Commands
 
