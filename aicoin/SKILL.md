@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.15 | **Last Updated:** 2026-03-04
+**Version:** 1.5.16 | **Last Updated:** 2026-03-04
 
 ## Quick Reference — Most Common Commands
 
@@ -497,6 +497,7 @@ Requires `npm install ccxt` and exchange API keys.
 4. For futures/swap: calculate actual buying power = balance × leverage
 5. Verify: buying power ≥ order value
 6. **Confirm with user**: "You want to buy X contracts (= Y BTC ≈ Z USDT), correct?" before placing the order
+7. Show clear summary: Coin, Direction, Quantity, Est. Cost, Leverage (if applicable)
 
 Example pre-trade check for BTC/USDT perpetual on OKX:
 ```bash
