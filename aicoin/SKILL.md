@@ -17,9 +17,10 @@ Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.co
 **FREQTRADE OPERATIONS:**
 - ✅ ALWAYS use `node scripts/ft-deploy.mjs deploy` for deployment
 - ✅ ALWAYS use `node scripts/ft-deploy.mjs backtest` for backtesting
+- ✅ ALWAYS use `node scripts/ft-deploy.mjs create_strategy` to write strategies
 - ❌ NEVER use Docker commands
 - ❌ NEVER manually run `freqtrade` commands
-- ❌ NEVER write custom Python scripts for Freqtrade
+- ❌ NEVER write custom Python strategy files by hand — use `create_strategy`
 
 **TRADING SAFETY:**
 - ❌ NEVER place orders without explicit user confirmation
@@ -667,6 +668,7 @@ The `open` action automatically:
 | `deploy` | Deploy Freqtrade (clone, setup.sh, config, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
 | `backtest` | Run backtest (no running process needed) | `{"strategy":"SampleStrategy","timeframe":"1h","timerange":"20250101-20260301"}` |
 | `hyperopt` | Parameter optimization | `{"strategy":"FundingRateStrategy","timeframe":"1h","timerange":"20250101-20260301","epochs":100}` |
+| `create_strategy` | **Generate strategy file** | `{"name":"MyStrategy","timeframe":"15m","aicoin_data":["funding_rate","ls_ratio"]}` |
 | `strategy_list` | List available strategies | None |
 | `update` | Update Freqtrade to latest version | None |
 | `status` | Process status | None |
@@ -790,7 +792,7 @@ This automatically:
 ### When User Mentions These Keywords → Use Freqtrade
 
 - 回测 / backtest → **MUST use `ft-deploy.mjs backtest`** (does NOT require Freqtrade to be running). NEVER write custom Python backtest scripts, NEVER manually run freqtrade commands.
-- 写策略 / write strategy → **FIRST read an existing template** (e.g. `FundingRateStrategy.py`), then write `.py` based on it. See "Writing Custom Strategies with AiCoin Data" below.
+- 写策略 / write strategy → **MUST use `ft-deploy.mjs create_strategy`** to generate strategy file. NEVER write strategy Python code manually. See `create_strategy` params below.
 - 量化策略 / strategy → `ft-dev.mjs strategy_list` (requires running process)
 - 部署机器人 / deploy bot → `ft-deploy.mjs deploy`
 - 实盘 / live trading → `ft-deploy.mjs deploy '{"dry_run":false}'`
@@ -801,72 +803,29 @@ This automatically:
 
 ### Writing Custom Strategies with AiCoin Data
 
-**🚨 BEFORE writing ANY strategy, ALWAYS read an existing template first:**
+**🚨 MUST use `ft-deploy.mjs create_strategy` to generate strategy files. NEVER write strategy Python code manually.**
+
 ```bash
-cat ~/.freqtrade/user_data/strategies/FundingRateStrategy.py
-```
-Copy the pattern exactly. Do NOT invent your own approach.
+# Generate a strategy with AiCoin funding rate + long/short ratio data
+node scripts/ft-deploy.mjs create_strategy '{"name":"MyStrategy","timeframe":"15m","aicoin_data":["funding_rate","ls_ratio"],"description":"资金费率极端做反向"}'
 
-**Required strategy structure:**
-```python
-class MyStrategy(IStrategy):
-    INTERFACE_VERSION = 3          # MUST be 3
-    timeframe = '15m'
-    can_short = True               # MUST set for short trading
-    minimal_roi = {"0": 0.05}
-    stoploss = -0.05
-
-    def populate_indicators(self, dataframe, metadata):
-        # ... compute indicators ...
-        # AiCoin data (live/dry_run only):
-        if self.dp and self.dp.runmode.value in ('live', 'dry_run'):
-            self._update_data(metadata)
-        return dataframe
-
-    def populate_entry_trend(self, dataframe, metadata):   # NO 's' at end!
-        # ... entry logic ...
-        return dataframe
-
-    def populate_exit_trend(self, dataframe, metadata):    # NO 's' at end!
-        # ... exit logic ...
-        return dataframe
+# Generate a pure technical indicator strategy (no AiCoin data)
+node scripts/ft-deploy.mjs create_strategy '{"name":"SimpleRSI","timeframe":"1h"}'
 ```
 
-**⚠️ Common mistakes (NEVER do these):**
-- ❌ `populate_entry_trends` → ✅ `populate_entry_trend` (no 's')
-- ❌ `populate_exit_trades` → ✅ `populate_exit_trend`
-- ❌ `for x in self.param.range` → ✅ `self.param.value` (single value, not loop)
-- ❌ Missing `INTERFACE_VERSION = 3` or `can_short = True`
+**`aicoin_data` options** (combine any):
+| Data source | What it does | AiCoin tier |
+|-------------|-------------|-------------|
+| `funding_rate` | Extreme funding = over-leveraged, trade against | Basic ($29/mo) |
+| `ls_ratio` | Contrarian signal from retail long/short ratio | Basic ($29/mo) |
+| `big_orders` | Whale buy/sell pressure from institutional orders | Normal ($99/mo) |
+| `open_interest` | Detect OI spikes = fragile market | Pro ($699/mo) |
+| `liquidation_map` | Liquidation cascade direction bias | Premium ($299/mo) |
 
-**AiCoin data import (MUST use this exact pattern):**
-```python
-def _update_data(self, metadata):
-    try:
-        import sys, os
-        _sd = os.path.dirname(os.path.abspath(__file__))
-        if _sd not in sys.path:
-            sys.path.insert(0, _sd)
-        from aicoin_data import AiCoinData, ccxt_to_aicoin
-        ac = AiCoinData(cache_ttl=300)
-        pair = metadata.get('pair', 'BTC/USDT:USDT')
-        exchange = self.config.get('exchange', {}).get('name', 'binance')
-        symbol = ccxt_to_aicoin(pair, exchange)
-        # ... call ac.xxx() methods ...
-    except ImportError:
-        logger.warning("aicoin_data module not found.")
-    except Exception as e:
-        logger.warning(f"AiCoin data error: {e}")
+**After generating, backtest immediately:**
+```bash
+node scripts/ft-deploy.mjs backtest '{"strategy":"MyStrategy","timeframe":"15m","timerange":"20250101-20260301"}'
 ```
-
-**aicoin_data.py API quick reference:**
-| Method | Returns | Use case |
-|--------|---------|----------|
-| `ac.funding_rate(symbol, weighted=True, limit='5')` | `{data: [{time,open,high,low,close}]}` close=rate | Funding rate strategy |
-| `ac.ls_ratio()` | `{data: {detail: {last: "0.87"}}}` | Contrarian L/S signal |
-| `ac.big_orders(symbol)` | `{data: [{side,amount,...}]}` | Whale order flow |
-| `ac.open_interest(coin, interval='15m', limit='10')` | `{data: [{openInterest,...}]}` | OI trend detection |
-| `ac.liquidation_map(symbol, cycle='24h')` | `{data: {longLiquidation, shortLiquidation}}` | Liquidation bias |
-| `ac.coin_ticker(coin_list='bitcoin')` | Price data | Current price |
 
 ---
 

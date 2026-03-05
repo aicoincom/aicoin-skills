@@ -474,6 +474,33 @@ const actions = {
     return { strategy, timeframe, epochs, spaces, jobs, loss_function: lossFunc, output };
   },
 
+  create_strategy: async (params = {}) => {
+    const name = params.name;
+    if (!name) throw new Error('name is required. Example: {"name":"MyStrategy","timeframe":"15m","aicoin_data":["funding_rate","ls_ratio"]}');
+    if (!/^[A-Z][A-Za-z0-9_]+$/.test(name)) throw new Error('name must be a valid Python class name starting with uppercase (e.g. MyStrategy)');
+
+    mkdirSync(STRAT_DIR, { recursive: true });
+    const dest = resolve(STRAT_DIR, `${name}.py`);
+    const tf = params.timeframe || '15m';
+    const desc = params.description || 'Custom strategy';
+    const ds = new Set(params.aicoin_data || []);
+
+    const code = buildStrategyCode(name, tf, desc, ds);
+    writeFileSync(dest, code);
+
+    return {
+      success: true,
+      strategy: name,
+      file: dest,
+      timeframe: tf,
+      aicoin_data: [...ds],
+      note: ds.size
+        ? `Strategy uses AiCoin data (${[...ds].join(', ')}) in live/dry_run. Falls back to pure technical indicators in backtest.`
+        : 'Pure technical indicator strategy. To add AiCoin data, pass aicoin_data array.',
+      available_aicoin_data: ['funding_rate', 'ls_ratio', 'big_orders', 'open_interest', 'liquidation_map'],
+    };
+  },
+
   strategy_list: async () => {
     const files = [];
     if (existsSync(STRAT_DIR)) {
@@ -493,6 +520,256 @@ const actions = {
     return { removed: true, note: `Process stopped. Config preserved at ${FT_DIR}. To fully remove: rm -rf ${FT_DIR}` };
   },
 };
+
+// ─── Strategy code generator ───
+
+function buildStrategyCode(name, tf, desc, ds) {
+  const L = [];  // lines
+  const has = k => ds.has(k);
+  const any = ds.size > 0;
+
+  // Header
+  L.push(`# ${name} - ${desc}`);
+  if (any) L.push(`# AiCoin data: ${[...ds].join(', ')} (live/dry_run only)`);
+  L.push(`# Backtest: uses technical indicators only`);
+  L.push(`#`);
+  L.push(`from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter`);
+  L.push(`from pandas import DataFrame`);
+  L.push(`import logging`);
+  L.push(``);
+  L.push(`logger = logging.getLogger(__name__)`);
+  L.push(``);
+  L.push(``);
+  L.push(`class ${name}(IStrategy):`);
+  L.push(`    INTERFACE_VERSION = 3`);
+  L.push(`    timeframe = '${tf}'`);
+  L.push(`    can_short = True`);
+  L.push(``);
+  L.push(`    minimal_roi = {"0": 0.05, "60": 0.03, "120": 0.01}`);
+  L.push(`    stoploss = -0.05`);
+  L.push(`    trailing_stop = True`);
+  L.push(`    trailing_stop_positive = 0.02`);
+  L.push(`    trailing_stop_positive_offset = 0.03`);
+  L.push(``);
+  L.push(`    # Hyperopt parameters`);
+  L.push(`    rsi_buy = IntParameter(20, 40, default=30, space='buy')`);
+  L.push(`    rsi_sell = IntParameter(60, 80, default=70, space='sell')`);
+  if (has('funding_rate'))
+    L.push(`    funding_threshold = DecimalParameter(0.005, 0.1, default=0.01, space='buy')`);
+  L.push(``);
+
+  // AiCoin instance vars
+  if (any) {
+    L.push(`    # AiCoin cached data (updated every 5 min in live mode)`);
+    if (has('funding_rate'))     L.push(`    _ac_funding_rate = 0.0`);
+    if (has('ls_ratio'))         L.push(`    _ac_ls_ratio = 0.5`);
+    if (has('big_orders'))       L.push(`    _ac_whale_signal = 0.0`);
+    if (has('open_interest'))    L.push(`    _ac_oi_rising = False`);
+    if (has('liquidation_map'))  L.push(`    _ac_liq_bias = 0.0`);
+    L.push(`    _ac_last_update = 0.0`);
+    L.push(``);
+  }
+
+  // populate_indicators
+  L.push(`    def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:`);
+  L.push(`        # RSI`);
+  L.push(`        delta = dataframe['close'].diff()`);
+  L.push(`        gain = delta.clip(lower=0).rolling(window=14).mean()`);
+  L.push(`        loss = (-delta.clip(upper=0)).rolling(window=14).mean()`);
+  L.push(`        rs = gain / loss`);
+  L.push(`        dataframe['rsi'] = 100 - (100 / (1 + rs))`);
+  L.push(``);
+  L.push(`        # Bollinger Bands`);
+  L.push(`        dataframe['bb_mid'] = dataframe['close'].rolling(window=20).mean()`);
+  L.push(`        bb_std = dataframe['close'].rolling(window=20).std()`);
+  L.push(`        dataframe['bb_upper'] = dataframe['bb_mid'] + 2 * bb_std`);
+  L.push(`        dataframe['bb_lower'] = dataframe['bb_mid'] - 2 * bb_std`);
+  L.push(``);
+  L.push(`        # EMA`);
+  L.push(`        dataframe['ema_fast'] = dataframe['close'].ewm(span=8, adjust=False).mean()`);
+  L.push(`        dataframe['ema_slow'] = dataframe['close'].ewm(span=21, adjust=False).mean()`);
+  L.push(``);
+  L.push(`        # Volume SMA`);
+  L.push(`        dataframe['vol_sma'] = dataframe['volume'].rolling(window=20).mean()`);
+
+  if (any) {
+    L.push(``);
+    L.push(`        # AiCoin data columns (default values for backtest)`);
+    if (has('funding_rate')) {
+      L.push(`        dataframe['funding_rate'] = 0.0`);
+      L.push(`        dataframe['funding_extreme'] = 0`);
+    }
+    if (has('ls_ratio'))         L.push(`        dataframe['ls_ratio'] = 0.5`);
+    if (has('big_orders'))       L.push(`        dataframe['whale_signal'] = 0.0`);
+    if (has('open_interest'))    L.push(`        dataframe['oi_rising'] = 0`);
+    if (has('liquidation_map'))  L.push(`        dataframe['liq_bias'] = 0.0`);
+    L.push(``);
+    L.push(`        if self.dp and self.dp.runmode.value in ('live', 'dry_run'):`);
+    L.push(`            import time`);
+    L.push(`            now = time.time()`);
+    L.push(`            if now - self._ac_last_update > 300:`);
+    L.push(`                self._update_aicoin_data(metadata)`);
+    L.push(`                self._ac_last_update = now`);
+    L.push(``);
+    if (has('funding_rate')) {
+      L.push(`            dataframe.iloc[-1, dataframe.columns.get_loc('funding_rate')] = self._ac_funding_rate`);
+      L.push(`            t = self.funding_threshold.value`);
+      L.push(`            if self._ac_funding_rate > t:`);
+      L.push(`                dataframe.iloc[-1, dataframe.columns.get_loc('funding_extreme')] = 1`);
+      L.push(`            elif self._ac_funding_rate < -t:`);
+      L.push(`                dataframe.iloc[-1, dataframe.columns.get_loc('funding_extreme')] = -1`);
+    }
+    if (has('ls_ratio'))
+      L.push(`            dataframe.iloc[-1, dataframe.columns.get_loc('ls_ratio')] = self._ac_ls_ratio`);
+    if (has('big_orders'))
+      L.push(`            dataframe.iloc[-1, dataframe.columns.get_loc('whale_signal')] = self._ac_whale_signal`);
+    if (has('open_interest'))
+      L.push(`            dataframe.iloc[-1, dataframe.columns.get_loc('oi_rising')] = 1 if self._ac_oi_rising else 0`);
+    if (has('liquidation_map'))
+      L.push(`            dataframe.iloc[-1, dataframe.columns.get_loc('liq_bias')] = self._ac_liq_bias`);
+  }
+
+  L.push(``);
+  L.push(`        return dataframe`);
+  L.push(``);
+
+  // _update_aicoin_data
+  if (any) {
+    L.push(`    def _update_aicoin_data(self, metadata: dict):`);
+    L.push(`        try:`);
+    L.push(`            import sys, os`);
+    L.push(`            _sd = os.path.dirname(os.path.abspath(__file__))`);
+    L.push(`            if _sd not in sys.path:`);
+    L.push(`                sys.path.insert(0, _sd)`);
+    L.push(`            from aicoin_data import AiCoinData, ccxt_to_aicoin`);
+    L.push(`            ac = AiCoinData(cache_ttl=300)`);
+    L.push(`            pair = metadata.get('pair', 'BTC/USDT:USDT')`);
+    L.push(`            exchange = self.config.get('exchange', {}).get('name', 'binance')`);
+    L.push(`            symbol = ccxt_to_aicoin(pair, exchange)`);
+    if (has('open_interest'))
+      L.push(`            base = pair.split('/')[0]`);
+    L.push(``);
+
+    if (has('funding_rate')) {
+      L.push(`            try:`);
+      L.push(`                data = ac.funding_rate(symbol, weighted=True, limit='5')`);
+      L.push(`                items = data.get('data', [])`);
+      L.push(`                if isinstance(items, list) and items:`);
+      L.push(`                    latest = items[0]`);
+      L.push(`                    if isinstance(latest, dict) and 'close' in latest:`);
+      L.push(`                        self._ac_funding_rate = float(latest['close']) * 100`);
+      L.push(`                        logger.info(f"AiCoin funding rate for {pair}: {self._ac_funding_rate:.4f}%")`);
+      L.push(`            except Exception as e:`);
+      L.push(`                logger.debug(f"AiCoin funding_rate unavailable: {e}")`);
+      L.push(``);
+    }
+    if (has('ls_ratio')) {
+      L.push(`            try:`);
+      L.push(`                ls = ac.ls_ratio()`);
+      L.push(`                detail = ls.get('data', {}).get('detail', {})`);
+      L.push(`                if detail:`);
+      L.push(`                    ratio = float(detail.get('last', 1.0))`);
+      L.push(`                    self._ac_ls_ratio = max(0.0, min(1.0, ratio / (1.0 + ratio)))`);
+      L.push(`                    logger.info(f"AiCoin L/S ratio: {self._ac_ls_ratio:.2f}")`);
+      L.push(`            except Exception as e:`);
+      L.push(`                logger.debug(f"AiCoin ls_ratio unavailable: {e}")`);
+      L.push(``);
+    }
+    if (has('big_orders')) {
+      L.push(`            try:`);
+      L.push(`                orders = ac.big_orders(symbol)`);
+      L.push(`                if 'data' in orders and isinstance(orders['data'], list):`);
+      L.push(`                    buy_vol = sum(float(o.get('amount', 0)) for o in orders['data'] if o.get('side', '').lower() in ('buy', 'bid', 'long'))`);
+      L.push(`                    sell_vol = sum(float(o.get('amount', 0)) for o in orders['data'] if o.get('side', '').lower() in ('sell', 'ask', 'short'))`);
+      L.push(`                    total = buy_vol + sell_vol`);
+      L.push(`                    if total > 0:`);
+      L.push(`                        self._ac_whale_signal = (buy_vol - sell_vol) / total`);
+      L.push(`                        logger.info(f"AiCoin whale signal for {pair}: {self._ac_whale_signal:.2f}")`);
+      L.push(`            except Exception as e:`);
+      L.push(`                logger.debug(f"AiCoin big_orders unavailable: {e}")`);
+      L.push(``);
+    }
+    if (has('open_interest')) {
+      L.push(`            try:`);
+      L.push(`                oi_data = ac.open_interest(base, interval='${tf}', limit='10')`);
+      L.push(`                if 'data' in oi_data and isinstance(oi_data['data'], list) and len(oi_data['data']) >= 2:`);
+      L.push(`                    def get_oi(item):`);
+      L.push(`                        for k in ('openInterest', 'open_interest', 'oi', 'value'):`);
+      L.push(`                            if k in item: return float(item[k])`);
+      L.push(`                        return 0`);
+      L.push(`                    first_oi, last_oi = get_oi(oi_data['data'][0]), get_oi(oi_data['data'][-1])`);
+      L.push(`                    if first_oi > 0:`);
+      L.push(`                        change = (last_oi - first_oi) / first_oi * 100`);
+      L.push(`                        self._ac_oi_rising = change > 3.0`);
+      L.push(`                        logger.info(f"AiCoin OI: rising={self._ac_oi_rising}, change={change:.2f}%")`);
+      L.push(`            except Exception as e:`);
+      L.push(`                logger.debug(f"AiCoin OI unavailable: {e}")`);
+      L.push(``);
+    }
+    if (has('liquidation_map')) {
+      L.push(`            try:`);
+      L.push(`                liq = ac.liquidation_map(symbol, cycle='24h')`);
+      L.push(`                if 'data' in liq and isinstance(liq['data'], dict):`);
+      L.push(`                    d = liq['data']`);
+      L.push(`                    long_liq = float(d.get('longLiquidation', d.get('long_vol', 0)))`);
+      L.push(`                    short_liq = float(d.get('shortLiquidation', d.get('short_vol', 0)))`);
+      L.push(`                    total = long_liq + short_liq`);
+      L.push(`                    if total > 0:`);
+      L.push(`                        self._ac_liq_bias = (short_liq - long_liq) / total`);
+      L.push(`                        logger.info(f"AiCoin liq bias for {pair}: {self._ac_liq_bias:.2f}")`);
+      L.push(`            except Exception as e:`);
+      L.push(`                logger.debug(f"AiCoin liquidation_map unavailable: {e}")`);
+      L.push(``);
+    }
+
+    L.push(`        except ImportError:`);
+    L.push(`            logger.warning("aicoin_data module not found. Run ft-deploy.mjs to install.")`);
+    L.push(`        except Exception as e:`);
+    L.push(`            logger.warning(f"AiCoin data error: {e}")`);
+    L.push(``);
+  }
+
+  // populate_entry_trend
+  const longC = [
+    "(dataframe['rsi'] < self.rsi_buy.value)",
+    "(dataframe['ema_fast'] > dataframe['ema_slow'])",
+    "(dataframe['volume'] > dataframe['vol_sma'] * 0.5)",
+  ];
+  const shortC = [
+    "(dataframe['rsi'] > self.rsi_sell.value)",
+    "(dataframe['ema_fast'] < dataframe['ema_slow'])",
+    "(dataframe['volume'] > dataframe['vol_sma'] * 0.5)",
+  ];
+  if (has('funding_rate'))     { longC.push("(dataframe['funding_extreme'] <= 0)");  shortC.push("(dataframe['funding_extreme'] >= 0)"); }
+  if (has('ls_ratio'))         { longC.push("(dataframe['ls_ratio'] <= 0.55)");      shortC.push("(dataframe['ls_ratio'] >= 0.45)"); }
+  if (has('big_orders'))       { longC.push("(dataframe['whale_signal'] >= -0.3)");  shortC.push("(dataframe['whale_signal'] <= 0.3)"); }
+  if (has('liquidation_map'))  { longC.push("(dataframe['liq_bias'] >= -0.3)");      shortC.push("(dataframe['liq_bias'] <= 0.3)"); }
+
+  L.push(`    def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:`);
+  L.push(`        dataframe.loc[`);
+  longC.forEach((c, i) => L.push(`            ${c}${i < longC.length - 1 ? ' &' : ','}`));
+  L.push(`            'enter_long'] = 1`);
+  L.push(``);
+  L.push(`        dataframe.loc[`);
+  shortC.forEach((c, i) => L.push(`            ${c}${i < shortC.length - 1 ? ' &' : ','}`));
+  L.push(`            'enter_short'] = 1`);
+  L.push(``);
+  L.push(`        return dataframe`);
+  L.push(``);
+
+  // populate_exit_trend
+  L.push(`    def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:`);
+  L.push(`        dataframe.loc[`);
+  L.push(`            (dataframe['rsi'] > 70),`);
+  L.push(`            'exit_long'] = 1`);
+  L.push(`        dataframe.loc[`);
+  L.push(`            (dataframe['rsi'] < 30),`);
+  L.push(`            'exit_short'] = 1`);
+  L.push(`        return dataframe`);
+  L.push(``);
+
+  return L.join('\n');
+}
 
 // ─── Sample strategy (pure pandas, no TA-Lib dependency) ───
 
