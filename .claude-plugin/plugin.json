@@ -1,0 +1,17 @@
+{
+  "name": "aicoin-skills",
+  "version": "1.0.0",
+  "skills": [
+    "./skills/"
+  ],
+  "keywords": [
+    "skills",
+    "crypto",
+    "aicoin",
+    "trading",
+    "freqtrade",
+    "hyperliquid",
+    "market-data",
+    "coinos"
+  ]
+}

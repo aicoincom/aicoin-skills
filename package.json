@@ -1,0 +1,39 @@
+{
+  "name": "aicoin-skills",
+  "version": "2.0.0",
+  "description": "CoinOS skills for AI coding assistants — crypto market data, exchange trading, Freqtrade strategy automation, and Hyperliquid whale analytics powered by AiCoin Open API",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "crypto",
+    "aicoin",
+    "trading",
+    "freqtrade",
+    "hyperliquid",
+    "market-data",
+    "coinos",
+    "openclaw"
+  ],
+  "author": {
+    "name": "AiCoin",
+    "url": "https://www.aicoin.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aicoincom/aicoin-skills.git"
+  },
+  "homepage": "https://www.aicoin.com/opendata",
+  "files": [
+    "skills/",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".claude-plugin/"
+  ],
+  "scripts": {
+    "postinstall": "echo '\\n  aicoin-skills installed!\\n  Skills: coinos-market, coinos-trading, coinos-freqtrade, coinos-hyperliquid\\n  Docs: https://www.aicoin.com/opendata\\n'"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
