@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.29 | **Last Updated:** 2026-03-05
+**Version:** 1.5.30 | **Last Updated:** 2026-03-05
 
 ---
 
@@ -572,6 +572,7 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 | `transfer` | Transfer funds | `{"exchange":"binance","code":"USDT","amount":100,"from_account":"spot","to_account":"future"}` |
 
 **Notes on `transfer`:**
+- **Account names MUST use these exact values**: `spot`, `future`, `delivery`, `margin`, `funding`. Do NOT use `futures`, `usdm`, `coinm`, or other aliases — they may cause errors.
 - **OKX unified account (重要)**: OKX uses a **unified trading account** — spot and derivatives share the SAME balance. **Do NOT ask the user to transfer funds between accounts.** If transfer returns error 58123, tell the user: "你的 OKX 是统一账户，现货和合约共用同一个余额，不需要划转。" Do NOT suggest manual transfer in the app.
 - **Binance**: Requires explicit transfer between spot/futures accounts.
 
