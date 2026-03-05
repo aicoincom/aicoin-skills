@@ -479,6 +479,11 @@ if (!action || !actions[action]) {
   process.exit(1);
 }
 const params = rest.length ? JSON.parse(rest.join(' ')) : {};
-actions[action](params).then(r => console.log(JSON.stringify(r, null, 2))).catch(e => {
-  console.error(e.message); process.exit(1);
+actions[action](params).then(r => {
+  r._reminder = 'IMPORTANT: Always use ft-deploy.mjs for ALL Freqtrade operations. NEVER use Docker commands.';
+  console.log(JSON.stringify(r, null, 2));
+}).catch(e => {
+  console.error(e.message);
+  console.error('_reminder: Always use ft-deploy.mjs for ALL Freqtrade operations. NEVER use Docker commands.');
+  process.exit(1);
 });
