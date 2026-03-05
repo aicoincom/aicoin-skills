@@ -14,12 +14,12 @@ Select which skills to install, or use `--yes` to install all 4.
 
 ## Skills
 
-| Skill | What it does | Scripts |
-|-------|-------------|---------|
-| **aicoin-market** | Prices, K-lines, funding rates, OI, whale orders, news, signals | coin, market, features, news, twitter, newsflash |
-| **aicoin-trading** | Exchange trading (Binance/OKX/Bybit/...), automated trading | exchange, auto-trade |
-| **aicoin-freqtrade** | Strategy creation, backtesting, bot deployment | ft-deploy, ft, ft-dev |
-| **aicoin-hyperliquid** | Hyperliquid whale tracking, liquidations, trader analytics | hl-market, hl-trader |
+| Skill                  | What it does                                                    | Scripts                                          |
+| ---------------------- | --------------------------------------------------------------- | ------------------------------------------------ |
+| **aicoin-market**      | Prices, K-lines, funding rates, OI, whale orders, news, signals | coin, market, features, news, twitter, newsflash |
+| **aicoin-trading**     | Exchange trading (Binance/OKX/Bybit/...), automated trading     | exchange, auto-trade                             |
+| **aicoin-freqtrade**   | Strategy creation, backtesting, bot deployment                  | ft-deploy, ft, ft-dev                            |
+| **aicoin-hyperliquid** | Hyperliquid whale tracking, liquidations, trader analytics      | hl-market, hl-trader                             |
 
 ## Quick Start
 
@@ -74,12 +74,6 @@ BINANCE_API_SECRET="xxx"
 # Proxy (optional)
 PROXY_URL="socks5://127.0.0.1:7890"
 ```
-
-## Why 4 Skills?
-
-The original monolithic skill had an 843-line SKILL.md. Weaker models (e.g., MiniMax-M2.5) couldn't follow critical instructions buried deep in it — like ignoring "MUST use create_strategy" and hand-writing broken Python instead.
-
-Each skill now has a focused SKILL.md (< 200 lines), making critical rules impossible to miss.
 
 ## License
 

@@ -14,12 +14,12 @@ npx skills add aicoincom/coinos-skills
 
 ## Skills
 
-| Skill | 功能 | 脚本 |
-|-------|------|------|
-| **aicoin-market** | 行情、K线、资金费率、持仓量、大单、新闻、信号 | coin, market, features, news, twitter, newsflash |
-| **aicoin-trading** | 交易所交易（Binance/OKX/Bybit/...）、自动交易 | exchange, auto-trade |
-| **aicoin-freqtrade** | 策略创建、回测、机器人部署 | ft-deploy, ft, ft-dev |
-| **aicoin-hyperliquid** | Hyperliquid 鲸鱼追踪、清算、交易员分析 | hl-market, hl-trader |
+| Skill                  | 功能                                          | 脚本                                             |
+| ---------------------- | --------------------------------------------- | ------------------------------------------------ |
+| **aicoin-market**      | 行情、K线、资金费率、持仓量、大单、新闻、信号 | coin, market, features, news, twitter, newsflash |
+| **aicoin-trading**     | 交易所交易（Binance/OKX/Bybit/...）、自动交易 | exchange, auto-trade                             |
+| **aicoin-freqtrade**   | 策略创建、回测、机器人部署                    | ft-deploy, ft, ft-dev                            |
+| **aicoin-hyperliquid** | Hyperliquid 鲸鱼追踪、清算、交易员分析        | hl-market, hl-trader                             |
 
 ## 快速开始
 
@@ -74,12 +74,6 @@ BINANCE_API_SECRET="xxx"
 # 代理（可选）
 PROXY_URL="socks5://127.0.0.1:7890"
 ```
-
-## 为什么拆成 4 个 Skill？
-
-原来的单体 Skill 有 843 行 SKILL.md。弱模型（如 MiniMax-M2.5）无法遵循埋在深处的关键指令 —— 比如无视"必须用 create_strategy"而手写有问题的 Python。
-
-现在每个 Skill 的 SKILL.md < 200 行，关键规则不可能被忽略。
 
 ## License
 
