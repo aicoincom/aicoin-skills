@@ -211,9 +211,14 @@ cli({
       };
     }
     const ex = await getExchange(exchange);
-    // Normalize account names for CCXT (lowercase)
-    const from = from_account.toLowerCase();
-    const to = to_account.toLowerCase();
+    // Normalize account names to CCXT-recognized keys
+    // CCXT Binance only accepts: spot/main, future, delivery, margin/cross, linear, swap, inverse, funding, option
+    // AI agents may say "futures", "usdm", "coinm" etc. which CCXT misinterprets as isolated margin symbols
+    const ALIAS = { futures: 'future', usdm: 'future', coinm: 'delivery' };
+    const fromRaw = from_account.toLowerCase();
+    const toRaw = to_account.toLowerCase();
+    const from = ALIAS[fromRaw] || fromRaw;
+    const to = ALIAS[toRaw] || toRaw;
     try {
       return await ex.transfer(code, amount, from, to);
     } catch (err) {
