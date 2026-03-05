@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.28 | **Last Updated:** 2026-03-05
+**Version:** 1.5.29 | **Last Updated:** 2026-03-05
 
 ---
 
@@ -97,6 +97,13 @@ node scripts/exchange.mjs balance '{"exchange":"okx"}'
 - Keep responses concise - users can ask for details if needed
 - Always fetch fresh data - NEVER use cached or memorized prices
 - Timestamps: API returns UTC, convert to user's timezone if needed (default: show UTC+8 for Chinese users)
+- **Language: Always reply in the same language as the user.** If the user writes in Chinese, ALL text (titles, headings, analysis, labels) MUST be in Chinese. Never mix English headings into a Chinese response.
+
+**Coin Recommendation Best Practices:**
+- When the user asks for coin picks WITHOUT specifying a sector, recommend across MULTIPLE sectors (AI, DeFi, L2, Meme, Infrastructure, etc.) for diversification
+- Only focus on a single sector when the user explicitly requests it (e.g., "AI赛道", "DeFi概念")
+- Use `hot_coins` with different keys (defi, gamefi, web, newcoin, market) to discover coins across sectors, don't just pick from one category
+- Always include reasoning for each pick: why THIS coin, why NOW (momentum, volume spike, whale activity, news catalyst, etc.)
 
 ## Setup Checklist
 
