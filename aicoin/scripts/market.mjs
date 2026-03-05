@@ -2,6 +2,28 @@
 // AiCoin Market Data CLI
 import { apiGet, apiPost, cli } from '../lib/aicoin-api.mjs';
 
+// Kline symbol alias: short names → AiCoin kline format
+const KLINE_ALIASES = {
+  'btc': 'btcusdt:okex', 'bitcoin': 'btcusdt:okex',
+  'eth': 'ethusdt:okex', 'ethereum': 'ethusdt:okex',
+  'sol': 'solusdt:okex', 'solana': 'solusdt:okex',
+  'doge': 'dogeusdt:okex', 'dogecoin': 'dogeusdt:okex',
+  'xrp': 'xrpusdt:okex',
+  'bnb': 'bnbusdt:binance',
+  'ada': 'adausdt:okex',
+  'avax': 'avaxusdt:okex',
+  'dot': 'dotusdt:okex',
+  'link': 'linkusdt:okex',
+  'matic': 'maticusdt:okex', 'pol': 'maticusdt:okex',
+};
+
+function resolveKlineSymbol(symbol) {
+  if (!symbol) return symbol;
+  if (symbol.includes(':')) return symbol;
+  const key = symbol.toLowerCase().replace(/[\s/]/g, '');
+  return KLINE_ALIASES[key] || symbol;
+}
+
 cli({
   // market_info
   exchanges: () => apiGet('/api/v2/market'),
@@ -21,7 +43,7 @@ cli({
   },
   // kline
   kline: ({ symbol, period, size = '100', since, open_time }) => {
-    const p = { symbol, size };
+    const p = { symbol: resolveKlineSymbol(symbol), size };
     if (period) p.period = period;
     if (since) p.since = since;
     if (open_time) p.open_time = open_time;
