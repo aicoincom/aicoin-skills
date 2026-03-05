@@ -2,7 +2,7 @@
 // Automated Trading — config management + trade execution helper
 // Strategy decisions are made by the AI agent, not this script.
 import { cli } from '../lib/aicoin-api.mjs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -33,8 +33,8 @@ function saveConfig(cfg) {
 }
 
 function ex(action, params) {
-  const cmd = `node ${resolve(__dir, 'exchange.mjs')} ${action} '${JSON.stringify(params)}'`;
-  return JSON.parse(execSync(cmd, { encoding: 'utf-8', cwd: resolve(__dir, '..'), timeout: 30000 }));
+  const args = [resolve(__dir, 'exchange.mjs'), action, JSON.stringify(params)];
+  return JSON.parse(execFileSync(process.execPath, args, { encoding: 'utf-8', cwd: resolve(__dir, '..'), timeout: 30000 }));
 }
 
 cli({
@@ -133,9 +133,11 @@ cli({
     if (!pos) return { closed: false, reason: 'No open position' };
 
     const amount = Math.abs(Number(pos.contracts));
-    const side = Number(pos.contracts) > 0 ? 'sell' : 'buy';
+    const posDir = pos.side || (Number(pos.contracts) > 0 ? 'long' : 'short');
+    const side = posDir === 'long' ? 'sell' : 'buy';
     const order = ex('create_order', {
       exchange: cfg.exchange, symbol: cfg.symbol, type: 'market', side, amount, market_type: cfg.market_type, confirmed: 'true',
+      params: { reduceOnly: true },
     });
     return { closed: true, side, amount, order_id: order.id };
   },

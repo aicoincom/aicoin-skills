@@ -143,11 +143,35 @@ cli({
   },
   positions: async ({ exchange, symbols, market_type }) => {
     const ex = await getExchange(exchange, market_type);
-    return ex.fetchPositions(symbols);
+    const all = await ex.fetchPositions(symbols);
+    // Filter out zero-size positions (Binance returns 100+ empty entries)
+    return all.filter(p => Math.abs(Number(p.contracts || 0)) > 0);
   },
   open_orders: async ({ exchange, symbol, market_type }) => {
     const ex = await getExchange(exchange, market_type);
-    return ex.fetchOpenOrders(symbol);
+    if (symbol) return ex.fetchOpenOrders(symbol);
+    try {
+      return await ex.fetchOpenOrders();
+    } catch (err) {
+      if (err.message?.includes('symbol') || err.message?.includes('argument')) {
+        throw new Error(`${exchange} 查询未成交订单需要指定交易对，例如: {"symbol":"BTC/USDT"}`);
+      }
+      throw err;
+    }
+  },
+  closed_orders: async ({ exchange, symbol, market_type, since, limit = 50 }) => {
+    const ex = await getExchange(exchange, market_type);
+    const sinceTs = since ? new Date(since).getTime() : undefined;
+    return ex.fetchClosedOrders(symbol, sinceTs, Number(limit));
+  },
+  my_trades: async ({ exchange, symbol, market_type, since, limit = 50 }) => {
+    const ex = await getExchange(exchange, market_type);
+    const sinceTs = since ? new Date(since).getTime() : undefined;
+    return ex.fetchMyTrades(symbol, sinceTs, Number(limit));
+  },
+  fetch_order: async ({ exchange, symbol, order_id, market_type }) => {
+    const ex = await getExchange(exchange, market_type);
+    return ex.fetchOrder(order_id, symbol);
   },
   create_order: async ({ exchange, symbol, type, side, amount, price, market_type, params, confirmed }) => {
     // Safety: require explicit confirmation before placing real orders
@@ -169,7 +193,16 @@ cli({
       return preview;
     }
     const ex = await getExchange(exchange, market_type);
-    const order = await ex.createOrder(symbol, type, side, amount, price, params || {});
+    // OKX hedge mode: auto-set posSide if not explicitly provided
+    const orderParams = { ...(params || {}) };
+    if (exchange === 'okx' && market_type && market_type !== 'spot' && !orderParams.posSide) {
+      if (orderParams.reduceOnly) {
+        orderParams.posSide = side === 'buy' ? 'short' : 'long';
+      } else {
+        orderParams.posSide = side === 'buy' ? 'long' : 'short';
+      }
+    }
+    const order = await ex.createOrder(symbol, type, side, amount, price, orderParams);
     // For futures/swap, attach contract size context so callers know actual position
     if (market_type && market_type !== 'spot') {
       try {
@@ -197,9 +230,35 @@ cli({
     const ex = await getExchange(exchange, market_type);
     return ex.setLeverage(leverage, symbol);
   },
-  set_margin_mode: async ({ exchange, symbol, margin_mode, market_type }) => {
+  set_margin_mode: async ({ exchange, symbol, margin_mode, market_type, leverage }) => {
     const ex = await getExchange(exchange, market_type);
-    return ex.setMarginMode(margin_mode, symbol);
+    try {
+      const modeParams = exchange === 'okx' && leverage ? { lever: String(leverage) } : {};
+      if (exchange === 'okx' && margin_mode === 'isolated') {
+        const results = [];
+        for (const ps of ['long', 'short']) {
+          try {
+            results.push(await ex.setMarginMode(margin_mode, symbol, { ...modeParams, posSide: ps }));
+          } catch (e) {
+            const m = e.message || String(e);
+            if (m.includes('already') || m.includes('No need')) results.push({ posSide: ps, unchanged: true });
+            else throw e;
+          }
+        }
+        return { success: true, margin_mode, results };
+      }
+      const res = await ex.setMarginMode(margin_mode, symbol, modeParams);
+      if (res?.code === -4046 || res?.msg?.includes('No need to change')) {
+        return { success: true, margin_mode, message: `已经是 ${margin_mode} 模式，无需切换。` };
+      }
+      return res;
+    } catch (err) {
+      const msg = err.message || String(err);
+      if (msg.includes('-4046') || msg.includes('No need to change')) {
+        return { success: true, margin_mode, message: `已经是 ${margin_mode} 模式，无需切换。` };
+      }
+      throw err;
+    }
   },
   transfer: async ({ exchange, code, amount, from_account, to_account }) => {
     // OKX unified account: no transfer needed

@@ -8,7 +8,7 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.32 | **Last Updated:** 2026-03-05
+**Version:** 1.6.0 | **Last Updated:** 2026-03-05
 
 ---
 
@@ -515,6 +515,9 @@ Requires `npm install ccxt` and exchange API keys.
 | `balance` | Account balance | `{"exchange":"binance"}` |
 | `positions` | Open positions | `{"exchange":"binance","market_type":"swap"}` |
 | `open_orders` | Open orders | `{"exchange":"binance","symbol":"BTC/USDT"}` |
+| `closed_orders` | Order history | `{"exchange":"binance","symbol":"BTC/USDT","limit":50}` |
+| `my_trades` | Trade history | `{"exchange":"binance","symbol":"BTC/USDT","limit":50}` |
+| `fetch_order` | Order by ID | `{"exchange":"binance","symbol":"BTC/USDT","order_id":"xxx"}` |
 
 #### Trading (API key required)
 
@@ -663,6 +666,8 @@ The `open` action automatically:
 | `check` | Check prerequisites (Python 3.11+, git, exchange keys) | None |
 | `deploy` | Deploy Freqtrade (clone, setup.sh, config, start) | `{"dry_run":true,"pairs":["BTC/USDT:USDT","ETH/USDT:USDT"]}` |
 | `backtest` | Run backtest (no running process needed) | `{"strategy":"SampleStrategy","timeframe":"1h","timerange":"20250101-20260301"}` |
+| `hyperopt` | Parameter optimization | `{"strategy":"FundingRateStrategy","timeframe":"1h","timerange":"20250101-20260301","epochs":100}` |
+| `strategy_list` | List available strategies | None |
 | `update` | Update Freqtrade to latest version | None |
 | `status` | Process status | None |
 | `start` | Start stopped process | None |
@@ -671,6 +676,11 @@ The `open` action automatically:
 | `remove` | Remove process (preserves config) | None |
 
 **Deploy defaults to dry-run mode** (simulated trading, no real money). Pass `{"dry_run":false}` for live trading.
+
+**AiCoin-powered strategies** (auto-installed on deploy, use AiCoin data in live/dry-run mode, fall back to technical indicators in backtest):
+- `FundingRateStrategy` — Exploit extreme funding rates for mean reversion (Basic tier)
+- `WhaleFollowStrategy` — Follow whale order flow + contrarian L/S ratio (Normal tier)
+- `LiquidationHunterStrategy` — Profit from liquidation cascades (Premium tier)
 
 **IMPORTANT: NEVER use Docker for Freqtrade.** The deploy script uses `git clone` + `setup.sh -i` (official Freqtrade installation method). Do NOT fall back to Docker, do NOT write custom install scripts, do NOT try `pip install freqtrade` directly. Just run `node scripts/ft-deploy.mjs deploy` — it handles everything.
 

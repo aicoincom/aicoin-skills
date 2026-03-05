@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Freqtrade One-Click Deployment via git clone + setup.sh (official method)
 // Reads exchange keys from .env, creates config, starts as background process
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+const __dir = dirname(fileURLToPath(import.meta.url));
 
 // Load .env
 function loadEnv() {
@@ -234,6 +237,31 @@ const actions = {
     // 4. Create directories
     mkdirSync(STRAT_DIR, { recursive: true });
 
+    // 4b. Copy AiCoin Python SDK + strategy templates
+    const skillDir = resolve(__dir, '..');
+    const sdkSrc = resolve(skillDir, 'lib', 'aicoin_data.py');
+    const defaultsSrc = resolve(skillDir, 'lib', 'defaults.json');
+    const strategiesSrc = resolve(skillDir, 'strategies');
+
+    if (existsSync(sdkSrc)) {
+      copyFileSync(sdkSrc, resolve(STRAT_DIR, 'aicoin_data.py'));
+      console.error('Copied AiCoin Python SDK to strategies/');
+    }
+    if (existsSync(defaultsSrc)) {
+      copyFileSync(defaultsSrc, resolve(STRAT_DIR, 'defaults.json'));
+    }
+    if (existsSync(strategiesSrc)) {
+      for (const f of readdirSync(strategiesSrc)) {
+        if (f.endsWith('.py')) {
+          const dest = resolve(STRAT_DIR, f);
+          if (!existsSync(dest)) {
+            copyFileSync(resolve(strategiesSrc, f), dest);
+            console.error(`Copied strategy template: ${f}`);
+          }
+        }
+      }
+    }
+
     // 5. Clone + install Freqtrade via official setup.sh
     if (!existsSync(FT_BIN)) {
       // Clone repo if not present
@@ -310,6 +338,9 @@ const actions = {
       note: config.dry_run
         ? 'Running in DRY-RUN mode (no real money). Use deploy with {"dry_run":false} for live trading.'
         : 'WARNING: Running in LIVE mode with real money!',
+      aicoin_strategies: existsSync(resolve(STRAT_DIR, 'aicoin_data.py'))
+        ? ['FundingRateStrategy', 'WhaleFollowStrategy', 'LiquidationHunterStrategy']
+        : [],
     };
   },
 
@@ -405,6 +436,54 @@ const actions = {
       { timeout: 300000 }
     );
     return { timeframe, timerange: timerange || 'all available', output };
+  },
+
+  hyperopt: async (params = {}) => {
+    if (!existsSync(FT_BIN)) throw new Error('Freqtrade not installed. Run deploy first.');
+    if (!existsSync(CONFIG_PATH)) throw new Error('No config found. Run deploy first.');
+
+    const strategy = params.strategy || 'SampleStrategy';
+    const timeframe = params.timeframe || '1h';
+    const timerange = params.timerange || '';
+    const epochs = Math.min(Number(params.epochs) || 100, 500);
+    const spaces = params.spaces || 'roi stoploss trailing buy sell';
+    const jobs = Math.min(Number(params.jobs) || 1, 4);
+    const lossFunc = params.loss || 'SharpeHyperOptLoss';
+    const minTrades = params.min_trades || 20;
+    const timerangeArg = timerange ? ` --timerange ${timerange}` : '';
+
+    const proxyEnv = process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    const proxyPrefix = proxyEnv ? `env HTTPS_PROXY=${proxyEnv} HTTP_PROXY=${proxyEnv} ` : '';
+
+    console.error('Downloading historical data for hyperopt...');
+    try {
+      run(
+        `${proxyPrefix}${FT_BIN} download-data --config ${CONFIG_PATH} --timeframe ${timeframe}${timerangeArg} --userdir ${USER_DATA}`,
+        { timeout: 300000 }
+      );
+    } catch (e) {
+      console.error(`Data download warning: ${e.message}`);
+    }
+
+    console.error(`Running hyperopt: strategy=${strategy}, epochs=${epochs}, jobs=${jobs}, spaces=${spaces}`);
+    const output = run(
+      `${proxyPrefix}${FT_BIN} hyperopt --config ${CONFIG_PATH} --strategy ${strategy} --timeframe ${timeframe}${timerangeArg} --userdir ${USER_DATA} --hyperopt-loss ${lossFunc} --spaces ${spaces} --epochs ${epochs} -j ${jobs} --min-trades ${minTrades}`,
+      { timeout: 1800000 }
+    );
+
+    return { strategy, timeframe, epochs, spaces, jobs, loss_function: lossFunc, output };
+  },
+
+  strategy_list: async () => {
+    const files = [];
+    if (existsSync(STRAT_DIR)) {
+      for (const f of readdirSync(STRAT_DIR)) {
+        if (f.endsWith('.py') && f !== '__init__.py' && f !== 'aicoin_data.py') {
+          files.push(f.replace('.py', ''));
+        }
+      }
+    }
+    return { strategies: files, path: STRAT_DIR };
   },
 
   remove: async () => {
