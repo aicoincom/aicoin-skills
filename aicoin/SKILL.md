@@ -8,7 +8,25 @@ metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "b
 
 Crypto data & trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/opendata).
 
-**Version:** 1.5.24 | **Last Updated:** 2026-03-04
+**Version:** 1.5.25 | **Last Updated:** 2026-03-05
+
+---
+
+## 🚨 CRITICAL RULES - READ FIRST
+
+**FREQTRADE OPERATIONS:**
+- ✅ ALWAYS use `node scripts/ft-deploy.mjs deploy` for deployment
+- ✅ ALWAYS use `node scripts/ft-deploy.mjs backtest` for backtesting
+- ❌ NEVER use Docker commands
+- ❌ NEVER manually run `freqtrade` commands
+- ❌ NEVER write custom Python scripts for Freqtrade
+
+**TRADING SAFETY:**
+- ❌ NEVER place orders without explicit user confirmation
+- ❌ NEVER auto-adjust order parameters
+- ✅ ALWAYS show order preview and ask "确认下单？" first
+
+---
 
 **Data Sources:** AiCoin aggregates data from 200+ exchanges. Price data is real-time, K-lines updated every second, funding rates every 8h.
 

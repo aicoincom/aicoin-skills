@@ -1,6 +1,6 @@
 {
   "name": "aicoin-skill",
-  "version": "1.5.24",
+  "version": "1.5.25",
   "private": true,
   "type": "module",
   "optionalDependencies": {
