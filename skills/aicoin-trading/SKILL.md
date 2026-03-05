@@ -1,6 +1,6 @@
 ---
-name: coinos-trading
-description: "This skill should be used when the user asks about exchange trading, placing orders, checking balance, viewing positions, order history, market list, leverage, margin mode, transferring funds, or automated trading. Use when user says: 'buy BTC', 'sell ETH', 'check balance', 'place order', 'open long', 'open short', 'close position', 'set leverage', 'auto trade', 'view positions', '下单', '买入', '卖出', '查余额', '做多', '做空', '平仓', '设杠杆', '自动交易', '合约交易', '现货交易'. Supports Binance, OKX, Bybit, Bitget, Gate.io, HTX, KuCoin, MEXC, Coinbase. For crypto prices/charts/news, use coinos-market. For Freqtrade strategies, use coinos-freqtrade. For Hyperliquid, use coinos-hyperliquid."
+name: aicoin-trading
+description: "This skill should be used when the user asks about exchange trading, placing orders, checking balance, viewing positions, order history, market list, leverage, margin mode, transferring funds, or automated trading. Use when user says: 'buy BTC', 'sell ETH', 'check balance', 'place order', 'open long', 'open short', 'close position', 'set leverage', 'auto trade', 'view positions', '下单', '买入', '卖出', '查余额', '做多', '做空', '平仓', '设杠杆', '自动交易', '合约交易', '现货交易'. Supports Binance, OKX, Bybit, Bitget, Gate.io, HTX, KuCoin, MEXC, Coinbase. For crypto prices/charts/news, use aicoin-market. For Freqtrade strategies, use aicoin-freqtrade. For Hyperliquid, use aicoin-hyperliquid."
 metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "bins": ["node"] }, "homepage": "https://www.aicoin.com/opendata", "source": "https://github.com/aicoincom/aicoin-skills", "license": "MIT" } }
 ---
 
@@ -128,16 +128,16 @@ The `open` action automatically: checks balance, calculates position size (capit
 4. Set up OpenClaw cron:
 ```bash
 openclaw cron add --name "BTC auto trade" --every 10m --session isolated \
-  --message "Use coinos-market to fetch data, analyze, then use coinos-trading auto-trade.mjs open/close"
+  --message "Use aicoin-market to fetch data, analyze, then use aicoin-trading auto-trade.mjs open/close"
 ```
 
 ## Cross-Skill References
 
 | Need | Use |
 |------|-----|
-| Prices, K-lines, news, signals | **coinos-market** |
-| Freqtrade strategies/backtest | **coinos-freqtrade** |
-| Hyperliquid whale tracking | **coinos-hyperliquid** |
+| Prices, K-lines, news, signals | **aicoin-market** |
+| Freqtrade strategies/backtest | **aicoin-freqtrade** |
+| Hyperliquid whale tracking | **aicoin-hyperliquid** |
 
 ## Common Errors
 

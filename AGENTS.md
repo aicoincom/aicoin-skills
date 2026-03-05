@@ -6,10 +6,10 @@ This is a **CoinOS skill collection** providing 4 skills for crypto market data,
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| coinos-market | Prices, K-lines, news, signals, whale orders | User asks about crypto prices, charts, funding rates, news, trending coins |
-| coinos-trading | Exchange trading, automated trading | User wants to buy/sell, check balance, manage positions, auto-trade |
-| coinos-freqtrade | Strategy creation, backtesting, bot deployment | User wants to write strategies, backtest, deploy Freqtrade bots |
-| coinos-hyperliquid | Hyperliquid whale tracking, analytics | User asks about HL whale positions, liquidations, trader stats |
+| aicoin-market | Prices, K-lines, news, signals, whale orders | User asks about crypto prices, charts, funding rates, news, trending coins |
+| aicoin-trading | Exchange trading, automated trading | User wants to buy/sell, check balance, manage positions, auto-trade |
+| aicoin-freqtrade | Strategy creation, backtesting, bot deployment | User wants to write strategies, backtest, deploy Freqtrade bots |
+| aicoin-hyperliquid | Hyperliquid whale tracking, analytics | User asks about HL whale positions, liquidations, trader stats |
 
 ## Skill Discovery
 
@@ -23,4 +23,4 @@ Skills are in the `skills/` directory. Each skill contains a `SKILL.md` with:
 
 ## Legacy
 
-The `aicoin/` directory contains the original monolithic skill. It remains functional for backwards compatibility but new installations should use the 4 `coinos-*` skills above.
+The `aicoin/` directory contains the original monolithic skill. It remains functional for backwards compatibility but new installations should use the 4 `aicoin-*` skills above.

@@ -1,6 +1,6 @@
 ---
-name: coinos-hyperliquid
-description: "This skill should be used when the user asks about Hyperliquid whale positions, Hyperliquid liquidations, Hyperliquid open interest, Hyperliquid trader analytics, Hyperliquid taker data, smart money on Hyperliquid, or any Hyperliquid-specific query. Use when user says: 'Hyperliquid whales', 'HL whale positions', 'HL liquidations', 'HL open interest', 'HL trader', 'smart money', 'Hyperliquid大户', 'HL鲸鱼', 'HL持仓', 'HL清算', 'HL持仓量', 'HL交易员'. For general crypto prices/news, use coinos-market. For exchange trading, use coinos-trading. For Freqtrade, use coinos-freqtrade."
+name: aicoin-hyperliquid
+description: "This skill should be used when the user asks about Hyperliquid whale positions, Hyperliquid liquidations, Hyperliquid open interest, Hyperliquid trader analytics, Hyperliquid taker data, smart money on Hyperliquid, or any Hyperliquid-specific query. Use when user says: 'Hyperliquid whales', 'HL whale positions', 'HL liquidations', 'HL open interest', 'HL trader', 'smart money', 'Hyperliquid大户', 'HL鲸鱼', 'HL持仓', 'HL清算', 'HL持仓量', 'HL交易员'. For general crypto prices/news, use aicoin-market. For exchange trading, use aicoin-trading. For Freqtrade, use aicoin-freqtrade."
 metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "bins": ["node"] }, "homepage": "https://www.aicoin.com/opendata", "source": "https://github.com/aicoincom/aicoin-skills", "license": "MIT" } }
 ---
 
@@ -130,9 +130,9 @@ Hyperliquid whale tracking and analytics powered by [AiCoin Open API](https://ww
 
 | Need | Use |
 |------|-----|
-| Prices, K-lines, news | **coinos-market** |
-| Exchange trading (buy/sell) | **coinos-trading** |
-| Freqtrade strategies/backtest | **coinos-freqtrade** |
+| Prices, K-lines, news | **aicoin-market** |
+| Exchange trading (buy/sell) | **aicoin-trading** |
+| Freqtrade strategies/backtest | **aicoin-freqtrade** |
 
 ## Common Errors
 
