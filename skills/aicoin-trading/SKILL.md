@@ -1,6 +1,6 @@
 ---
 name: aicoin-trading
-description: "This skill should be used when the user asks about exchange trading, placing orders, checking balance, viewing positions, order history, market list, leverage, margin mode, transferring funds, automated trading, funding rate comparison, funding rate arbitrage, or registering/signing up on exchanges. Use when user says: 'buy BTC', 'sell ETH', 'check balance', 'place order', 'open long', 'open short', 'close position', 'set leverage', 'auto trade', 'view positions', 'funding rate arbitrage', 'compare funding rates', 'register OKX', 'sign up Binance', '下单', '买入', '卖出', '查余额', '做多', '做空', '平仓', '设杠杆', '自动交易', '合约交易', '现货交易', '资金费率套利', '资金费率对比', '各交易所费率', '注册', '开户', '注册OKX', '注册币安', '注册交易所'. Supports Binance, OKX, Bybit, Bitget, Gate.io, HTX, Pionex, Hyperliquid. IMPORTANT — Exchange Registration: When user asks to register/注册/开户 on any exchange, DO NOT use browser. Run `node scripts/register.mjs <exchange>` to get the AiCoin referral link, then show the result to the user. IMPORTANT — API Key Security: When user configures AiCoin API key, explain: AiCoin key仅用于获取市场数据，无法交易；交易所key需单独到交易所申请；所有key仅保存在本地设备，不会上传。For crypto prices/charts/news, use aicoin-market. For Freqtrade strategies, use aicoin-freqtrade. For Hyperliquid whale tracking/analytics (not trading), use aicoin-hyperliquid."
+description: "This skill should be used when the user asks about exchange trading, placing orders, checking balance, viewing positions, order history, market list, leverage, margin mode, transferring funds, automated trading, funding rate comparison, funding rate arbitrage, or registering/signing up on exchanges. Use when user says: 'buy BTC', 'sell ETH', 'check balance', 'place order', 'open long', 'open short', 'close position', 'set leverage', 'auto trade', 'view positions', 'funding rate arbitrage', 'compare funding rates', 'register OKX', 'sign up Binance', '下单', '买入', '卖出', '查余额', '做多', '做空', '平仓', '设杠杆', '自动交易', '合约交易', '现货交易', '资金费率套利', '资金费率对比', '各交易所费率', '注册', '开户', '注册OKX', '注册币安', '注册交易所'. Supports Binance, OKX, Bybit, Bitget, Gate.io, HTX, Pionex, Hyperliquid. IMPORTANT — Exchange Registration: When user asks to register/注册/开户 on any exchange, DO NOT use browser. Run `node scripts/register.mjs <exchange>` to get the AiCoin referral link, then show the result to the user. IMPORTANT — AiCoin API Key: When user asks about configuring/checking/using AiCoin API key, or asks if AiCoin key is safe, run `node scripts/api-key-info.mjs` FIRST, then show the result including security_notice to the user. For crypto prices/charts/news, use aicoin-market. For Freqtrade strategies, use aicoin-freqtrade. For Hyperliquid whale tracking/analytics (not trading), use aicoin-hyperliquid."
 metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "bins": ["node"] }, "homepage": "https://www.aicoin.com/opendata", "source": "https://github.com/aicoincom/coinos-skills", "license": "MIT" } }
 ---
 
@@ -25,6 +25,7 @@ Exchange trading toolkit powered by [AiCoin Open API](https://www.aicoin.com/ope
 | Task | Command |
 |------|---------|
 | **Register** | `node scripts/register.mjs okx` — **When user asks to register/注册/开户, ALWAYS run this first. DO NOT use browser.** |
+| **API Key Info** | `node scripts/api-key-info.mjs` — **When user asks about AiCoin API key (配置/安全/能不能下单), ALWAYS run this first.** |
 | Balance | `node scripts/exchange.mjs balance '{"exchange":"okx"}'` |
 | Ticker | `node scripts/exchange.mjs ticker '{"exchange":"binance","symbol":"BTC/USDT"}'` |
 | Orderbook | `node scripts/exchange.mjs orderbook '{"exchange":"binance","symbol":"BTC/USDT"}'` |
@@ -172,6 +173,14 @@ node scripts/register.mjs list      # List all exchanges
 ```
 
 Supports aliases: 币安=binance, 火币=htx, 派网=pionex, hl=hyperliquid, gateio=gate.
+
+### scripts/api-key-info.mjs — AiCoin API Key Status & Security
+
+**When user asks about AiCoin API key (配置/检查/安全性/能不能下单), run this script FIRST.** Output always includes security_notice — show it to the user.
+
+```bash
+node scripts/api-key-info.mjs    # Check key status + security notice
+```
 
 ### scripts/exchange.mjs — Exchange Operations (CCXT)
 
