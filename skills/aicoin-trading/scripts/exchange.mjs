@@ -11,6 +11,20 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 
 const SUPPORTED = ['binance','okx','bybit','bitget','gate','htx','pionex','hyperliquid'];
 
+// AiCoin referral links — shown in exchanges list and missing-key errors
+const REFERRALS = {
+  okx:         { name: 'OKX',         code: 'aicoin20',  benefit: '永久返20%手续费', link: 'https://jump.do/zh-Hans/xlink-proxy?id=2' },
+  binance:     { name: 'Binance',     code: 'aicoin668', benefit: '返10% + $500',   link: 'https://jump.do/zh-Hans/xlink-proxy?id=3' },
+  bitget:      { name: 'Bitget',      code: 'hktb3191',  benefit: '返10%手续费',     link: 'https://jump.do/zh-Hans/xlink-proxy?id=6' },
+  htx:         { name: 'HTX',         code: 'j2us6223',  benefit: '',               link: 'https://jump.do/zh-Hans/xlink-proxy?id=4' },
+  gate:        { name: 'Gate.io',     code: 'AICOINGO',  benefit: '',               link: 'https://jump.do/zh-Hans/xlink-proxy?id=5' },
+  bybit:       { name: 'Bybit',       code: '34429',     benefit: '',               link: 'https://jump.do/zh-Hans/xlink-proxy?id=15' },
+  pionex:      { name: 'Pionex',      code: '4vgi0zUF',  benefit: '',               link: 'https://www.pionex.com/zh-CN/signUp?r=4vgi0zUF' },
+  hyperliquid: { name: 'Hyperliquid', code: 'AICOIN88',  benefit: '返4%手续费',      link: 'https://app.hyperliquid.xyz/join/AICOIN88' },
+};
+
+const SECURITY_NOTICE = '⚠️ AiCoin API Key 与交易所 API Key 是完全独立的两套密钥：(1) AiCoin API Key 仅用于获取市场数据（行情、K线、资金费率等），无法进行任何交易操作，也无法读取你在交易所的任何信息。(2) 交易所 API Key 需要单独到各交易所后台申请和授权。(3) 所有密钥仅保存在本地设备 .env 文件中，不会上传到任何服务器。';
+
 // AiCoin broker tags — ensures orders are attributed to AiCoin, not CCXT default
 const BROKER_CONFIG = {
   binance: {
@@ -54,6 +68,15 @@ async function getExchange(id, marketType, skipAuth = false) {
     if (process.env[`${pre}_PASSWORD`] || process.env[`${pre}_PASSPHRASE`]) {
       opts.password = process.env[`${pre}_PASSWORD`] || process.env[`${pre}_PASSPHRASE`];
     }
+    if (!opts.apiKey) {
+      const ref = REFERRALS[id] || {};
+      throw new Error(
+        `未配置 ${ref.name || id} 交易所 API Key。` +
+        (ref.link ? `\n注册${ref.name}（AiCoin专属优惠）：${ref.link}\n邀请码：${ref.code}${ref.benefit ? '，' + ref.benefit : ''}` : '') +
+        `\n配置方法：在 .env 文件中添加 ${pre}_API_KEY=xxx 和 ${pre}_API_SECRET=xxx` +
+        `\n${SECURITY_NOTICE}`
+      );
+    }
   }
   // Proxy support: PROXY_URL (MCP-compatible) or HTTPS_PROXY/HTTP_PROXY
   const proxyUrl = process.env.PROXY_URL
@@ -91,7 +114,26 @@ async function getExchange(id, marketType, skipAuth = false) {
 }
 
 cli({
-  exchanges: async () => SUPPORTED,
+  exchanges: async () => ({
+    supported: SUPPORTED.map(id => {
+      const ref = REFERRALS[id] || {};
+      return { exchange: id, name: ref.name || id, register_link: ref.link || '', invite_code: ref.code || '', benefit: ref.benefit || '' };
+    }),
+    security_notice: SECURITY_NOTICE,
+  }),
+  register: async ({ exchange: exName }) => {
+    if (!exName) return { exchanges: Object.keys(REFERRALS), usage: 'node exchange.mjs register \'{"exchange":"okx"}\'' };
+    const key = exName.toLowerCase().replace(/[.\s]/g, '');
+    const ALIASES = { 币安: 'binance', 火币: 'htx', 派网: 'pionex', hl: 'hyperliquid', gateio: 'gate' };
+    const id = ALIASES[key] || key;
+    const ref = REFERRALS[id];
+    if (!ref) return { error: `不支持 ${exName}`, supported: Object.keys(REFERRALS) };
+    return {
+      exchange: ref.name, invite_code: ref.code, benefit: ref.benefit || '无额外优惠', register_link: ref.link,
+      steps: ['打开注册链接', '选择手机或邮箱注册', '填入验证码、设置密码', '完成身份验证(KYC)', '如需API交易，到API管理创建key，配置到.env'],
+      security_notice: SECURITY_NOTICE,
+    };
+  },
   markets: async ({ exchange, market_type, base, quote, limit = 100 }) => {
     const ex = await getExchange(exchange, market_type, true);
     await ex.loadMarkets();
