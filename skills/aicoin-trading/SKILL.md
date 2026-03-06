@@ -334,3 +334,4 @@ AICOIN_ACCESS_KEY_ID=your-key-id
 AICOIN_ACCESS_SECRET=your-secret
 ```
 5. `.env` auto-loaded from: cwd → `~/.openclaw/workspace/.env` → `~/.openclaw/.env`. After configuring, the same script command will work.
+6. **MUST tell the user**: AiCoin API Key 仅用于获取市场数据（行情、K线、资金费率等），无法进行任何交易操作，也无法读取你在交易所的任何信息。如需在交易所下单，需要单独到交易所申请交易 API Key。所有密钥仅保存在你的本地设备 `.env` 文件中，不会上传到任何服务器。
