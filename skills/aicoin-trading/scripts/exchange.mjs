@@ -3,6 +3,7 @@
 // Requires: npm install ccxt
 import { cli } from '../lib/aicoin-api.mjs';
 import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -174,48 +175,95 @@ cli({
     return ex.fetchOrder(order_id, symbol);
   },
   create_order: async ({ exchange, symbol, type, side, amount, price, market_type, params, confirmed }) => {
-    // Safety: require explicit confirmation before placing real orders
-    if (confirmed !== 'true' && confirmed !== true) {
-      const ex = await getExchange(exchange, market_type);
-      await ex.loadMarkets();
-      const mkt = ex.markets[symbol];
-      const preview = {
-        _preview: true,
-        _message: '⚠️ Order NOT placed. Show this preview to the user and wait for their explicit confirmation (e.g. "确认" or "yes"). Then re-run with confirmed=true.',
-        exchange, symbol, type, side, amount, price: price || 'market',
-        market_type: market_type || 'spot',
-      };
-      if (mkt?.contractSize) {
-        preview._contractSize = mkt.contractSize;
-        preview._amountInBase = amount * mkt.contractSize;
-        preview._unit = `${amount} contracts × ${mkt.contractSize} ${mkt.base}/contract = ${amount * mkt.contractSize} ${mkt.base}`;
-      }
-      return preview;
-    }
-    const ex = await getExchange(exchange, market_type);
-    // OKX hedge mode: auto-set posSide if not explicitly provided
-    const orderParams = { ...(params || {}) };
-    if (exchange === 'okx' && market_type && market_type !== 'spot' && !orderParams.posSide) {
-      if (orderParams.reduceOnly) {
-        orderParams.posSide = side === 'buy' ? 'short' : 'long';
-      } else {
-        orderParams.posSide = side === 'buy' ? 'long' : 'short';
-      }
-    }
-    const order = await ex.createOrder(symbol, type, side, amount, price, orderParams);
-    // For futures/swap, attach contract size context so callers know actual position
-    if (market_type && market_type !== 'spot') {
-      try {
-        await ex.loadMarkets();
-        const mkt = ex.markets[symbol];
-        if (mkt?.contractSize) {
-          order._contractSize = mkt.contractSize;
-          order._amountInBase = amount * mkt.contractSize;
-          order._unit = `${amount} contracts × ${mkt.contractSize} ${mkt.base}/contract = ${amount * mkt.contractSize} ${mkt.base}`;
+    const pendingFile = resolve(__dir, '..', '.pending-order.json');
+
+    // Internal calls (from auto-trade.mjs) bypass file-based confirmation
+    const isInternal = process.env.AICOIN_INTERNAL_CALL === '1';
+
+    // Step 2: Confirmation — only works if a pending order file exists from Step 1
+    if (confirmed === 'true' || confirmed === true) {
+      if (isInternal) {
+        // Internal call: execute directly with provided params
+        const ex = await getExchange(exchange, market_type);
+        const orderParams = { ...(params || {}) };
+        if (exchange === 'okx' && market_type && market_type !== 'spot' && !orderParams.posSide) {
+          if (orderParams.reduceOnly) {
+            orderParams.posSide = side === 'buy' ? 'short' : 'long';
+          } else {
+            orderParams.posSide = side === 'buy' ? 'long' : 'short';
+          }
         }
-      } catch {}
+        const order = await ex.createOrder(symbol, type, side, amount, price, orderParams);
+        if (market_type && market_type !== 'spot') {
+          try {
+            await ex.loadMarkets();
+            const mkt = ex.markets[symbol];
+            if (mkt?.contractSize) {
+              order._contractSize = mkt.contractSize;
+              order._amountInBase = amount * mkt.contractSize;
+              order._unit = `${amount} contracts × ${mkt.contractSize} ${mkt.base}/contract = ${amount * mkt.contractSize} ${mkt.base}`;
+            }
+          } catch {}
+        }
+        return order;
+      }
+
+      let pending;
+      try { pending = JSON.parse(readFileSync(pendingFile, 'utf8')); }
+      catch { throw new Error('没有待确认的订单。请先不带 confirmed 参数调用 create_order 来预览订单，等用户确认后再重新调用并带上 confirmed=true。'); }
+
+      // Expire after 5 minutes
+      if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
+        try { unlinkSync(pendingFile); } catch {}
+        throw new Error('订单预览已过期（超过5分钟），请重新创建订单预览。');
+      }
+
+      try { unlinkSync(pendingFile); } catch {}
+
+      // Execute with stored params (prevents model from tampering between preview and confirm)
+      const ex = await getExchange(pending.exchange, pending.market_type);
+      const orderParams = { ...(pending.params || {}) };
+      if (pending.exchange === 'okx' && pending.market_type && pending.market_type !== 'spot' && !orderParams.posSide) {
+        if (orderParams.reduceOnly) {
+          orderParams.posSide = pending.side === 'buy' ? 'short' : 'long';
+        } else {
+          orderParams.posSide = pending.side === 'buy' ? 'long' : 'short';
+        }
+      }
+      const order = await ex.createOrder(pending.symbol, pending.type, pending.side, pending.amount, pending.price, orderParams);
+      if (pending.market_type && pending.market_type !== 'spot') {
+        try {
+          await ex.loadMarkets();
+          const mkt = ex.markets[pending.symbol];
+          if (mkt?.contractSize) {
+            order._contractSize = mkt.contractSize;
+            order._amountInBase = pending.amount * mkt.contractSize;
+            order._unit = `${pending.amount} contracts × ${mkt.contractSize} ${mkt.base}/contract = ${pending.amount * mkt.contractSize} ${mkt.base}`;
+          }
+        } catch {}
+      }
+      return order;
     }
-    return order;
+
+    // Step 1: Preview — save pending order to file, return preview
+    const ex = await getExchange(exchange, market_type);
+    await ex.loadMarkets();
+    const mkt = ex.markets[symbol];
+    const pendingOrder = { exchange, symbol, type, side, amount, price, market_type, params, timestamp: Date.now() };
+    writeFileSync(pendingFile, JSON.stringify(pendingOrder));
+
+    const preview = {
+      _preview: true,
+      _message: '⚠️ Order NOT placed. Show this preview to the user and wait for their explicit confirmation (e.g. "确认" or "yes"). Then re-run with confirmed=true.',
+      exchange, symbol, type, side, amount, price: price || 'market',
+      market_type: market_type || 'spot',
+    };
+    if (mkt?.contractSize) {
+      preview._contractSize = mkt.contractSize;
+      preview._amountInBase = amount * mkt.contractSize;
+      preview._unit = `${amount} contracts × ${mkt.contractSize} ${mkt.base}/contract = ${amount * mkt.contractSize} ${mkt.base}`;
+    }
+    return preview;
   },
   funding_rate: async ({ exchange, symbol, market_type }) => {
     const ex = await getExchange(exchange, market_type || 'swap');

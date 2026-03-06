@@ -35,7 +35,7 @@ function saveConfig(cfg) {
 function ex(action, params) {
   const args = [resolve(__dir, 'exchange.mjs'), action, JSON.stringify(params)];
   try {
-    return JSON.parse(execFileSync(process.execPath, args, { encoding: 'utf-8', cwd: resolve(__dir, '..'), timeout: 30000 }));
+    return JSON.parse(execFileSync(process.execPath, args, { encoding: 'utf-8', cwd: resolve(__dir, '..'), timeout: 30000, env: { ...process.env, AICOIN_INTERNAL_CALL: '1' } }));
   } catch (e) {
     return { error: `exchange.mjs ${action} failed: ${e.message}` };
   }
