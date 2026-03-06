@@ -15,10 +15,9 @@ In backtest mode, strategies should fall back to standard indicators
 (AiCoin real-time data is not available for historical periods).
 
 API tier requirements (some data needs paid subscription):
-  Free:    coin_ticker, kline, hot_coins, pair_ticker
-  Basic:   + ls_ratio, funding_rate, newsflash
-  Normal:  + big_orders, agg_trades, hl whale/liq/OI/taker
-  Premium: + depth, liquidation_map, indicator_kline
+  Free:    coin_ticker, kline, hot_coins, pair_ticker, funding_rate, ls_ratio
+  Normal:  + big_orders, agg_trades, hl whale/liq/OI/taker, grayscale_trust
+  Premium: + depth, liquidation_map, liquidation_history, indicator_kline
   Pro:     + open_interest, super_depth, ai_analysis
 See https://www.aicoin.com/opendata for plans.
 """
@@ -216,12 +215,12 @@ class AiCoinData:
     # ── Derivatives Data ──
 
     def ls_ratio(self) -> dict:
-        """Cross-exchange aggregated long/short ratio. [Basic+ tier]"""
+        """Cross-exchange aggregated long/short ratio. [Free tier]"""
         return self._get('/api/v2/mix/ls-ratio', cache_key='ls_ratio')
 
     def funding_rate(self, symbol: str, interval: str = '8h',
                      weighted: bool = False, limit: str = '20') -> dict:
-        """Funding rate history. weighted=True for volume-weighted cross-exchange rate. [Basic+ tier]"""
+        """Funding rate history. weighted=True for volume-weighted cross-exchange rate. [Free tier]"""
         path = ('/api/upgrade/v2/futures/funding-rate/vol-weight-history' if weighted
                 else '/api/upgrade/v2/futures/funding-rate/history')
         return self._get(path, {'symbol': symbol, 'interval': interval, 'limit': limit},

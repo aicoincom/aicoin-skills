@@ -483,12 +483,19 @@ const actions = {
     const dest = resolve(STRAT_DIR, `${name}.py`);
     const tf = params.timeframe || '15m';
     const desc = params.description || 'Custom strategy';
+    const PAID_DATA = { big_orders: 'Standard ($79/mo)', open_interest: 'Professional ($699/mo)', liquidation_map: 'Advanced ($299/mo)' };
     const ds = new Set(params.aicoin_data || []);
+
+    // Detect if using built-in free key (no custom key configured)
+    const KEY = process.env.AICOIN_ACCESS_KEY_ID || '';
+    const defaultKey = JSON.parse(readFileSync(resolve(__dir, '..', 'lib', 'defaults.json'), 'utf8')).accessKeyId || '';
+    const usingFreeKey = !KEY || KEY === defaultKey;
+    const paidUsed = [...ds].filter(d => d in PAID_DATA);
 
     const code = buildStrategyCode(name, tf, desc, ds);
     writeFileSync(dest, code);
 
-    return {
+    const result = {
       success: true,
       strategy: name,
       file: dest,
@@ -497,8 +504,14 @@ const actions = {
       note: ds.size
         ? `Strategy uses AiCoin data (${[...ds].join(', ')}) in live/dry_run. Falls back to pure technical indicators in backtest.`
         : 'Pure technical indicator strategy. To add AiCoin data, pass aicoin_data array.',
-      available_aicoin_data: ['funding_rate', 'ls_ratio', 'big_orders', 'open_interest', 'liquidation_map'],
+      available_aicoin_data: ['funding_rate (Free)', 'ls_ratio (Free)', 'big_orders (Standard)', 'open_interest (Professional)', 'liquidation_map (Advanced)'],
     };
+
+    if (usingFreeKey && paidUsed.length > 0) {
+      result.warning = `PAID KEY REQUIRED — Strategy uses ${paidUsed.map(d => `${d} (${PAID_DATA[d]})`).join(', ')} but no paid API key is configured. These data sources will silently fall back to defaults in live mode. Guide user: get API key at https://www.aicoin.com/opendata → add AICOIN_ACCESS_KEY_ID & AICOIN_ACCESS_SECRET to .env.`;
+    }
+
+    return result;
   },
 
   strategy_list: async () => {

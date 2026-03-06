@@ -26,11 +26,22 @@ node scripts/ft-deploy.mjs create_strategy '{"name":"SimpleRSI","timeframe":"1h"
 
 | Data source | What it does | AiCoin tier |
 |-------------|-------------|-------------|
-| `funding_rate` | Extreme funding = over-leveraged, trade against | Basic ($29/mo) |
-| `ls_ratio` | Contrarian signal from retail long/short ratio | Basic ($29/mo) |
+| `funding_rate` | Extreme funding = over-leveraged, trade against | **Free** |
+| `ls_ratio` | Contrarian signal from retail long/short ratio | **Free** |
 | `big_orders` | Whale buy/sell pressure from institutional orders | Standard ($79/mo) |
 | `open_interest` | Detect OI spikes = fragile market | Professional ($699/mo) |
 | `liquidation_map` | Liquidation cascade direction bias | Advanced ($299/mo) |
+
+### Strategy Generation Rules for Agent
+
+Based on the user's strategy description, decide which `aicoin_data` to include:
+
+- **Free tier data** (`funding_rate`, `ls_ratio`): Use freely whenever the strategy logic calls for it. No key configuration needed.
+- **Paid tier data** (`big_orders`, `open_interest`, `liquidation_map`):
+  1. **Do NOT silently include it.** First inform the user that this data requires a paid API key.
+  2. Tell them which tier is needed (see table above).
+  3. Guide them: get API key at https://www.aicoin.com/opendata → add `AICOIN_ACCESS_KEY_ID` & `AICOIN_ACCESS_SECRET` to `.env`.
+  4. Only include the paid data after user confirms they have the key configured.
 
 **After generating, backtest immediately:**
 ```bash
@@ -144,7 +155,7 @@ This automatically: clones Freqtrade, runs `setup.sh -i`, creates config from `.
 ## Built-in AiCoin Strategies
 
 Auto-installed on deploy:
-- **FundingRateStrategy** — Exploit extreme funding rates for mean reversion (Basic tier)
+- **FundingRateStrategy** — Exploit extreme funding rates for mean reversion (Free tier)
 - **WhaleFollowStrategy** — Follow whale order flow + contrarian L/S ratio (Standard tier)
 - **LiquidationHunterStrategy** — Profit from liquidation cascades (Advanced tier)
 
