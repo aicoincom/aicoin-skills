@@ -58,7 +58,7 @@ export async function apiGet(path, params = {}) {
     const text = await res.text();
     let hint = '';
     if (res.status === 403) {
-      hint = '\nHint: This feature requires a paid AiCoin API subscription. See SKILL.md tier table. Do NOT retry — use an alternative data source or suggest upgrading at https://www.aicoin.com/opendata';
+      hint = '\nPAID FEATURE — Do NOT retry. Guide user: get API key at https://www.aicoin.com/opendata → add AICOIN_ACCESS_KEY_ID & AICOIN_ACCESS_SECRET to .env file.';
     } else if (res.status === 400) {
       if (text.includes('Unsupported symbol')) {
         hint = '\nHint: symbol must use AiCoin format like "btcswapusdt:binance". Short names (BTC, ETH, SOL) are auto-resolved by coin.mjs.';
@@ -73,7 +73,7 @@ export async function apiGet(path, params = {}) {
   const json = await res.json();
   // Check for API-level errors (HTTP 200 but success=false)
   if (json.success === false && (json.errorCode === 304 || json.errorCode === 403)) {
-    json._note = 'This endpoint requires a paid AiCoin API subscription. The free key does not have access.';
+    json._note = 'PAID FEATURE — Do NOT retry. Guide user: get API key at https://www.aicoin.com/opendata → add AICOIN_ACCESS_KEY_ID & AICOIN_ACCESS_SECRET to .env file.';
   }
   return json;
 }

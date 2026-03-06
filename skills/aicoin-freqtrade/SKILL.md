@@ -28,9 +28,9 @@ node scripts/ft-deploy.mjs create_strategy '{"name":"SimpleRSI","timeframe":"1h"
 |-------------|-------------|-------------|
 | `funding_rate` | Extreme funding = over-leveraged, trade against | Basic ($29/mo) |
 | `ls_ratio` | Contrarian signal from retail long/short ratio | Basic ($29/mo) |
-| `big_orders` | Whale buy/sell pressure from institutional orders | Normal ($99/mo) |
-| `open_interest` | Detect OI spikes = fragile market | Pro ($699/mo) |
-| `liquidation_map` | Liquidation cascade direction bias | Premium ($299/mo) |
+| `big_orders` | Whale buy/sell pressure from institutional orders | Standard ($79/mo) |
+| `open_interest` | Detect OI spikes = fragile market | Professional ($699/mo) |
+| `liquidation_map` | Liquidation cascade direction bias | Advanced ($299/mo) |
 
 **After generating, backtest immediately:**
 ```bash
@@ -145,8 +145,8 @@ This automatically: clones Freqtrade, runs `setup.sh -i`, creates config from `.
 
 Auto-installed on deploy:
 - **FundingRateStrategy** — Exploit extreme funding rates for mean reversion (Basic tier)
-- **WhaleFollowStrategy** — Follow whale order flow + contrarian L/S ratio (Normal tier)
-- **LiquidationHunterStrategy** — Profit from liquidation cascades (Premium tier)
+- **WhaleFollowStrategy** — Follow whale order flow + contrarian L/S ratio (Standard tier)
+- **LiquidationHunterStrategy** — Profit from liquidation cascades (Advanced tier)
 
 ## User Journey
 
@@ -177,6 +177,7 @@ Auto-installed on deploy:
 
 ## Common Errors
 
+- `errorCode 304 / 403` — AiCoin data endpoint needs a paid key. Do NOT retry. Guide user: get API key at https://www.aicoin.com/opendata, add `AICOIN_ACCESS_KEY_ID` & `AICOIN_ACCESS_SECRET` to `.env`. Tiers: Free $0 / Basic $29 / Standard $79 / Advanced $299 / Professional $699.
 - `Python not found` — Need Python 3.11+. `ft-deploy.mjs check` validates this.
 - `Strategy not found` — Check `ft-deploy.mjs strategy_list`. File must be in `~/.freqtrade/user_data/strategies/`.
 - `Timerange format` — Use `YYYYMMDD-YYYYMMDD` (e.g., `20250101-20260301`).

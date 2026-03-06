@@ -141,6 +141,7 @@ openclaw cron add --name "BTC auto trade" --every 10m --session isolated \
 
 ## Common Errors
 
+- `errorCode 304 / 403` — Paid AiCoin feature. Do NOT retry. Guide user: get API key at https://www.aicoin.com/opendata. Tiers: Free $0 / Basic $29 / Standard $79 / Advanced $299 / Professional $699.
 - `Invalid symbol` — Use CCXT format: `BTC/USDT` (spot), `BTC/USDT:USDT` (swap)
 - `Insufficient balance` — Check balance first, don't auto-adjust. Tell user.
 - `API key invalid` — Keys in `.env`, never inline. Check if user configured exchange keys.

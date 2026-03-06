@@ -136,6 +136,7 @@ Hyperliquid whale tracking and analytics powered by [AiCoin Open API](https://ww
 
 ## Common Errors
 
+- `errorCode 304 / 403` — Paid feature. Do NOT retry. Guide user: get API key at https://www.aicoin.com/opendata, add `AICOIN_ACCESS_KEY_ID` & `AICOIN_ACCESS_SECRET` to `.env`. Tiers: Free $0 / Basic $29 / Standard $79 / Advanced $299 / Professional $699.
 - `Invalid coin` — Use uppercase: `BTC`, `ETH`, `SOL`
 - `Address format` — Must be full `0x...` Ethereum address
 - `Rate limit exceeded` — Wait 1-2s between requests
