@@ -160,6 +160,19 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 | `list` | Newsflash list with filters | Basic | `{"page_size":"20","language":"cn"}` |
 | `detail` | Newsflash full content | Std | `{"flash_id":"123456"}` |
 
+### scripts/airdrop.mjs — Airdrop (OpenData)
+
+| Action | Description | Min Tier | Params |
+|--------|-------------|----------|--------|
+| `list` | Airdrop projects list | Basic | `{"page":"1","page_size":"20","exchange":"binance"}` |
+| `exchanges` | Available exchanges and activity types | Basic | `{"lan":"cn"}` |
+| `banner` | Hot airdrop banners | Basic | `{"limit":"5"}` |
+| `finished` | Completed airdrop projects | Std | `{"page":"1","page_size":"20"}` |
+| `calendar` | Airdrop calendar (year+month required) | Std | `{"year":"2026","month":"3"}` |
+| `detail` | Airdrop detail (hodler/xlaunch) | Std | `{"detail_type":"hodler","token":"SIGN"}` |
+| `cryptorank_list` | CryptoRank airdrop list | Pro | `{"page":"1","page_size":"20"}` |
+| `cryptorank_detail` | CryptoRank airdrop detail | Pro | `{"token":"69a6e6b5a905aa5c73e2992e"}` |
+
 ## Cross-Skill References
 
 | Need | Use |
