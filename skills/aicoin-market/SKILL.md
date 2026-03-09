@@ -208,26 +208,51 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 
 When a script returns 304 or 403, this endpoint requires a higher API tier. **Do NOT retry the same call.**
 
-Tell the user (in their language):
+**IMPORTANT: Follow this exact flow (step by step, in the user's language):**
 
-1. **What happened**: This feature needs a paid AiCoin API subscription.
-2. **How to get a key**: Visit https://www.aicoin.com/opendata to register and create an API key.
-3. **Tier options**:
+### Step 1: Explain what happened
+Tell the user: "这个功能需要付费 AiCoin API 套餐。" + explain which tier is needed for this specific feature.
 
-| Tier | Price | Highlights |
-|------|-------|------------|
-| Free | $0 | Prices, K-lines, trending coins (6 endpoints) |
-| Basic | $29/mo | + Funding rate, L/S ratio, news, twitter (24 endpoints) |
-| Standard | $79/mo | + Whale orders, signals, grayscale (38 endpoints) |
-| Advanced | $299/mo | + Liquidation map, indicator K-lines, index, depth (49 endpoints) |
-| Professional | $699/mo | All 63 endpoints: AI analysis, OI, stocks, treasury |
+### Step 2: Show tier comparison
 
-4. **How to configure**: After getting a key, add to `.env` file:
-```
-AICOIN_ACCESS_KEY_ID=your-key-id
-AICOIN_ACCESS_SECRET=your-secret
-```
-Scripts auto-load `.env` from cwd, `~/.openclaw/workspace/.env`, or `~/.openclaw/.env`.
+| 套餐 | 价格 | 核心功能 | 适用人群 |
+|------|------|---------|---------|
+| 免费 | $0 | 行情、K线、热门币 (6个接口) | 入门用户 |
+| Basic | $29/月 | + 资金费率、多空比、新闻、推特 (30个接口) | 日常交易员 |
+| Standard | $79/月 | + 大单数据、信号、灰度 (44个接口) | 专业交易员 |
+| Advanced | $299/月 | + 爆仓热力图、指标K线、深度 (55个接口) | 量化交易者 |
+| Professional | $699/月 | 全部63个接口：AI分析、持仓量、美股、国库 | 机构用户 |
 
-5. **After configuring**: The same script command will work. No code changes needed.
-6. **MUST tell the user**: AiCoin API Key 仅用于获取市场数据（行情、K线、新闻等），无法进行任何交易操作，也无法读取你在交易所的任何信息。如需在交易所下单，需要单独到交易所申请交易 API Key（见 aicoin-trading skill）。所有密钥仅保存在你的本地设备 `.env` 文件中，不会上传到任何服务器。
+### Step 3: Guide upgrade (one-click path)
+
+> **升级步骤：**
+>
+> 1. 打开 [AiCoin 开放数据](https://www.aicoin.com/opendata)
+> 2. 注册/登录账号
+> 3. 选择需要的套餐并完成支付
+> 4. 在「API 管理」中创建 API Key
+> 5. 将获取的 Key 添加到 `.env` 文件：
+>    ```
+>    AICOIN_ACCESS_KEY_ID=你的KeyID
+>    AICOIN_ACCESS_SECRET=你的Secret
+>    ```
+> 6. 配置完成！再次运行刚才的命令即可使用。
+
+**`.env` 文件位置（按优先级加载）：**
+- 当前目录 `.env`
+- `~/.openclaw/workspace/.env`
+- `~/.openclaw/.env`
+
+### Step 4: Security reassurance
+
+> **安全说明：**
+> - AiCoin API Key 仅用于获取市场数据（行情、K线、新闻等），**无法进行任何交易操作**
+> - 无法读取你在交易所的任何信息
+> - 如需在交易所下单，需要单独到交易所申请交易 API Key（见 aicoin-trading skill）
+> - 所有密钥仅保存在你的本地设备 `.env` 文件中，**不会上传到任何服务器**
+
+### Step 5: Offer free alternatives
+
+If the user doesn't want to upgrade, suggest what they CAN do with the free tier:
+- 查价格、K线、热门币、交易所列表、RSS新闻 — 这些都是免费的
+- 资金费率的替代：可以通过 aicoin-trading 的 `funding_rate` 从交易所直接获取（免费，但需要交易所 API key）

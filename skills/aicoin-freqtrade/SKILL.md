@@ -12,15 +12,42 @@ Freqtrade strategy creation, backtesting, and deployment powered by [AiCoin Open
 
 ## STRATEGY CREATION — USE create_strategy
 
-**You MUST use `create_strategy` to generate strategy files. NEVER write Python strategy code by hand.**
+**⚠️ ABSOLUTE RULE: You MUST use `create_strategy` to generate strategy files. NEVER write Python strategy code by hand. NEVER create .py files directly. NEVER use custom backtest scripts. If the user wants a strategy that seems complex, use `create_strategy` with the appropriate `indicators` parameter — it supports 17+ technical indicators. There is NO scenario where you should bypass `create_strategy`.**
 
 ```bash
-# Generate a strategy with AiCoin data
-node scripts/ft-deploy.mjs create_strategy '{"name":"MyStrategy","timeframe":"15m","aicoin_data":["funding_rate","ls_ratio"],"description":"资金费率极端做反向"}'
+# Generate a strategy with specific indicators
+node scripts/ft-deploy.mjs create_strategy '{"name":"MACDStrategy","timeframe":"15m","indicators":["macd","rsi","atr"],"description":"MACD金叉+RSI过滤+ATR止损"}'
 
-# Generate a pure technical strategy (no AiCoin data)
+# Generate a Bollinger + KDJ strategy
+node scripts/ft-deploy.mjs create_strategy '{"name":"BBKDJStrategy","timeframe":"1h","indicators":["bb","stochastic","volume_sma"],"description":"布林带+KDJ超买超卖策略"}'
+
+# Generate with AiCoin data
+node scripts/ft-deploy.mjs create_strategy '{"name":"WhaleStrat","timeframe":"15m","indicators":["rsi","macd"],"aicoin_data":["funding_rate","ls_ratio"],"description":"鲸鱼+技术指标策略"}'
+
+# Default (RSI + BB + EMA + Volume SMA)
 node scripts/ft-deploy.mjs create_strategy '{"name":"SimpleRSI","timeframe":"1h"}'
 ```
+
+### Available Technical Indicators (in `indicators` array)
+
+| Indicator | Key | Description |
+|-----------|-----|-------------|
+| RSI | `rsi` | 相对强弱指标 (14周期) |
+| Bollinger Bands | `bb` | 布林带 (20周期) |
+| EMA | `ema` | 指数移动平均 (8/21) |
+| SMA | `sma` | 简单移动平均 (10/50) |
+| MACD | `macd` | MACD + Signal + Histogram |
+| Stochastic/KDJ | `stochastic` or `kdj` | 随机指标 K/D/J |
+| ATR | `atr` | 平均真实波幅 |
+| ADX | `adx` | 平均方向指数 + DI+/DI- |
+| CCI | `cci` | 商品通道指数 |
+| Williams %R | `williams_r` | 威廉指标 |
+| VWAP | `vwap` | 成交量加权均价 |
+| Ichimoku | `ichimoku` | 一目均衡表 |
+| Volume SMA | `volume_sma` | 成交量均线 |
+| OBV | `obv` | 能量潮指标 |
+
+**Example**: User says "帮我写一个MACD金叉+布林带的策略" → use `"indicators":["macd","bb"]`
 
 **`aicoin_data` options** (combine any):
 
@@ -50,17 +77,18 @@ node scripts/ft-deploy.mjs backtest '{"strategy":"MyStrategy","timeframe":"15m",
 
 ## Critical Rules
 
-1. **ALWAYS use `create_strategy`** to write strategies. NEVER hand-write Python strategy files.
-2. **ALWAYS use `ft-deploy.mjs backtest`** for backtesting. NEVER write custom Python backtest scripts.
+1. **ALWAYS use `create_strategy`** to write strategies. **NEVER hand-write Python strategy files. NEVER create .py files manually. NEVER bypass create_strategy for any reason.** The tool supports 17+ indicators — use the `indicators` parameter.
+2. **ALWAYS use `ft-deploy.mjs backtest`** for backtesting. NEVER write custom Python backtest scripts. NEVER use simulated/fabricated data.
 3. **ALWAYS use `ft-deploy.mjs deploy`** for deployment. NEVER use Docker. NEVER manually run `freqtrade` commands.
 4. **NEVER manually edit Freqtrade config files.** Use `ft-deploy.mjs` actions.
 5. **NEVER manually run `freqtrade trade`, `source .venv/bin/activate`, or `pip install freqtrade`.**
+6. **When user describes a custom strategy**: Map their description to the available `indicators` list. For example: "MACD金叉策略" → `indicators:["macd"]`; "布林带+KDJ" → `indicators:["bb","stochastic"]`; "趋势跟踪" → `indicators:["adx","ema","atr"]`.
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
-| Create strategy | `node scripts/ft-deploy.mjs create_strategy '{"name":"MyStrat","timeframe":"15m","aicoin_data":["funding_rate"]}'` |
+| Create strategy | `node scripts/ft-deploy.mjs create_strategy '{"name":"MyStrat","timeframe":"15m","indicators":["rsi","macd","bb"],"aicoin_data":["funding_rate"]}'` |
 | Backtest | `node scripts/ft-deploy.mjs backtest '{"strategy":"MyStrat","timeframe":"1h","timerange":"20250101-20260301"}'` |
 | Deploy (dry-run) | `node scripts/ft-deploy.mjs deploy '{"pairs":["BTC/USDT:USDT"]}'` |
 | Deploy (live) | `node scripts/ft-deploy.mjs deploy '{"dry_run":false,"pairs":["BTC/USDT:USDT"]}'` |
@@ -121,7 +149,7 @@ This automatically: clones Freqtrade, runs `setup.sh -i`, creates config from `.
 | `deploy` | Deploy Freqtrade | `{"dry_run":true,"pairs":["BTC/USDT:USDT"]}` |
 | `backtest` | Run backtest | `{"strategy":"SampleStrategy","timeframe":"1h","timerange":"20250101-20260301"}` |
 | `hyperopt` | Parameter optimization | `{"strategy":"MyStrat","timeframe":"1h","timerange":"20250101-20260301","epochs":100}` |
-| `create_strategy` | Generate strategy file | `{"name":"MyStrat","timeframe":"15m","aicoin_data":["funding_rate","ls_ratio"]}` |
+| `create_strategy` | Generate strategy file | `{"name":"MyStrat","timeframe":"15m","indicators":["rsi","macd","bb","atr"],"aicoin_data":["funding_rate","ls_ratio"]}` — `indicators` is optional (defaults to rsi,bb,ema,volume_sma). See indicator list above. |
 | `strategy_list` | List strategies | None |
 | `update` | Update Freqtrade | None |
 | `status` | Process status | None |
@@ -188,11 +216,14 @@ Auto-installed on deploy:
 ## User Journey
 
 ```
+"帮我写一个MACD+布林带策略"
+  → node scripts/ft-deploy.mjs create_strategy '{"name":"MACDBBStrategy","timeframe":"15m","indicators":["macd","bb","volume_sma"],"description":"MACD金叉+布林带突破"}'
+
 "帮我写一个资金费率策略"
-  → node scripts/ft-deploy.mjs create_strategy '{"name":"FundingStrat","timeframe":"15m","aicoin_data":["funding_rate"]}'
+  → node scripts/ft-deploy.mjs create_strategy '{"name":"FundingStrat","timeframe":"15m","indicators":["rsi","ema"],"aicoin_data":["funding_rate"]}'
 
 "回测一下"
-  → node scripts/ft-deploy.mjs backtest '{"strategy":"FundingStrat","timeframe":"15m","timerange":"20250101-20260301"}'
+  → node scripts/ft-deploy.mjs backtest '{"strategy":"MACDBBStrategy","timeframe":"15m","timerange":"20250101-20260301"}'
 
 "不错，部署"
   → node scripts/ft-deploy.mjs deploy '{"pairs":["BTC/USDT:USDT"]}'
@@ -203,6 +234,23 @@ Auto-installed on deploy:
 "今天赚了多少？"
   → node scripts/ft.mjs profit
 ```
+
+### Strategy Mapping Examples
+
+When users describe strategies in natural language, map to `indicators`:
+
+| User says | indicators | aicoin_data |
+|-----------|-----------|-------------|
+| "MACD策略" | `["macd"]` | — |
+| "布林带+RSI" | `["bb","rsi"]` | — |
+| "KDJ超买超卖" | `["stochastic"]` | — |
+| "趋势跟踪策略" | `["adx","ema","atr"]` | — |
+| "均线交叉" | `["sma"]` or `["ema"]` | — |
+| "一目均衡表" | `["ichimoku"]` | — |
+| "量价策略" | `["vwap","obv"]` | — |
+| "资金费率做反向" | `["rsi","ema"]` | `["funding_rate"]` |
+| "跟鲸鱼操作" | `["rsi","macd"]` | `["big_orders"]` |
+| "综合策略" | `["rsi","macd","bb","adx"]` | — |
 
 ## Cross-Skill References
 
