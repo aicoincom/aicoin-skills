@@ -296,55 +296,57 @@ cli({
     const pendingOrder = { exchange, symbol, type, side, amount, price, market_type, params, timestamp: Date.now() };
     writeFileSync(pendingFile, JSON.stringify(pendingOrder));
 
-    const preview = {
-      _preview: true,
-      _message: '⚠️ 订单未下达。请将以下全部信息展示给用户（包括风险提示），等待明确确认（"确认"/"yes"）后，再以 confirmed=true 重新调用。\n\n⚠️ 风险提示：加密货币交易具有高风险，可能导致本金全部损失。合约交易使用杠杆会放大收益和亏损。请确保你了解相关风险，不要投入无法承受损失的资金。本工具不构成投资建议。',
-      exchange, symbol, type, side, amount, price: price || 'market',
-      market_type: market_type || 'spot',
-    };
+    // Build order details
+    const sideLabel = side === 'buy' ? '买入/做多' : '卖出/做空';
+    const typeLabel = type === 'market' ? '市价' : `限价 ${price}`;
+    const mktType = market_type || 'spot';
 
-    // Fetch current price for market orders
+    const orderInfo = { 交易所: exchange, 交易对: symbol, 方向: sideLabel, 类型: typeLabel };
+
+    // Fetch current price
+    let curPrice = null;
     if (type === 'market' || !price) {
       try {
         const tick = await ex.fetchTicker(symbol);
-        preview._current_price = tick.last;
-        if (mkt?.contractSize) {
-          preview._estimated_value = `${(amount * mkt.contractSize * tick.last).toFixed(2)} USDT`;
-        } else {
-          preview._estimated_value = `${(amount * tick.last).toFixed(2)} USDT`;
-        }
+        curPrice = tick.last;
+        orderInfo['当前价格'] = `$${curPrice.toLocaleString()}`;
       } catch {}
     }
 
-    // Futures: show contract details + leverage/margin info
+    // Contract details
     if (mkt?.contractSize) {
-      preview._contractSize = mkt.contractSize;
-      preview._amountInBase = amount * mkt.contractSize;
-      preview._unit = `${amount} 张合约 × ${mkt.contractSize} ${mkt.base}/张 = ${amount * mkt.contractSize} ${mkt.base}`;
+      orderInfo['合约数量'] = `${amount} 张`;
+      orderInfo['换算'] = `${amount} × ${mkt.contractSize} ${mkt.base}/张 = ${amount * mkt.contractSize} ${mkt.base}`;
+      if (curPrice) orderInfo['预估价值'] = `${(amount * mkt.contractSize * curPrice).toFixed(2)} USDT`;
+    } else {
+      orderInfo['数量'] = `${amount}`;
+      if (curPrice) orderInfo['预估价值'] = `${(amount * curPrice).toFixed(2)} USDT`;
     }
-    if (market_type && market_type !== 'spot') {
-      // Try to get current leverage and margin mode from positions
+
+    // Leverage & margin info for futures
+    if (mktType !== 'spot') {
       try {
         const positions = await ex.fetchPositions([symbol]);
         const pos = positions.find(p => p.symbol === symbol);
         if (pos) {
-          preview._current_leverage = pos.leverage;
-          preview._current_margin_mode = pos.marginMode || pos.marginType;
+          if (pos.leverage) orderInfo['杠杆'] = `${pos.leverage}x`;
+          if (pos.marginMode || pos.marginType) orderInfo['保证金模式'] = pos.marginMode || pos.marginType;
+          if (curPrice && pos.leverage) {
+            const lev = Number(pos.leverage);
+            const notional = mkt?.contractSize ? amount * mkt.contractSize * curPrice : amount * curPrice;
+            orderInfo['预估保证金'] = `${(notional / lev).toFixed(2)} USDT`;
+          }
         }
       } catch {}
-      // Estimate margin required
-      if (preview._current_price && preview._current_leverage) {
-        const lev = Number(preview._current_leverage);
-        const notional = mkt?.contractSize ? amount * mkt.contractSize * preview._current_price : amount * preview._current_price;
-        preview._estimated_margin = `${(notional / lev).toFixed(2)} USDT`;
-        preview._notional_value = `${notional.toFixed(2)} USDT`;
-      }
     }
 
-    // Risk disclaimer
-    preview._risk_warning = '⚠️ 风险提示：加密货币交易具有高风险，可能导致本金全部损失。合约交易使用杠杆会放大收益和亏损。请确保你了解相关风险，不要投入无法承受损失的资金。本工具不构成投资建议。';
-
-    return preview;
+    return {
+      _preview: true,
+      status: '⚠️ 订单未下达',
+      风险提示: '加密货币交易具有高风险，可能导致本金全部损失。合约交易使用杠杆会放大收益和亏损。不要投入无法承受损失的资金。本工具不构成投资建议。',
+      订单详情: orderInfo,
+      操作指引: '请将以上所有信息（包括风险提示）展示给用户。用户回复"确认"或"yes"后，以 confirmed=true 重新调用 create_order。',
+    };
   },
   funding_rate: async ({ exchange, symbol, market_type }) => {
     const ex = await getExchange(exchange, market_type || 'swap', true);
