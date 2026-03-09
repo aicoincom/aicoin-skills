@@ -386,19 +386,41 @@ cli({
     const ex = await getExchange(exchange, market_type);
     try {
       const modeParams = exchange === 'okx' && leverage ? { lever: String(leverage) } : {};
+
+      // OKX isolated mode: try hedge mode first (with posSide), fallback to one-way mode (without posSide)
       if (exchange === 'okx' && margin_mode === 'isolated') {
+        // First try with posSide (hedge mode)
+        let hedgeModeSuccess = true;
         const results = [];
         for (const ps of ['long', 'short']) {
           try {
             results.push(await ex.setMarginMode(margin_mode, symbol, { ...modeParams, posSide: ps }));
           } catch (e) {
             const m = e.message || String(e);
-            if (m.includes('already') || m.includes('No need') || m.includes('margin mode is not modified')) results.push({ posSide: ps, unchanged: true });
-            else throw e;
+            if (m.includes('already') || m.includes('No need') || m.includes('margin mode is not modified')) {
+              results.push({ posSide: ps, unchanged: true });
+            } else if (m.includes('posSide') || m.includes('51000')) {
+              // posSide error = one-way position mode, try without posSide
+              hedgeModeSuccess = false;
+              break;
+            } else throw e;
           }
         }
-        return { success: true, margin_mode, results };
+        if (hedgeModeSuccess) return { success: true, margin_mode, results };
+
+        // Fallback: one-way position mode (no posSide)
+        try {
+          const res = await ex.setMarginMode(margin_mode, symbol, modeParams);
+          return { success: true, margin_mode, response: res };
+        } catch (e2) {
+          const m2 = e2.message || String(e2);
+          if (m2.includes('already') || m2.includes('No need') || m2.includes('margin mode is not modified')) {
+            return { success: true, margin_mode, message: `已经是 ${margin_mode} 模式，无需切换。` };
+          }
+          throw e2;
+        }
       }
+
       const res = await ex.setMarginMode(margin_mode, symbol, modeParams);
       if (res?.code === -4046 || res?.msg?.includes('No need to change') || res?.msg?.includes('margin mode is not modified')) {
         return { success: true, margin_mode, message: `已经是 ${margin_mode} 模式，无需切换。` };
@@ -424,7 +446,10 @@ cli({
       if (!['cross', 'isolated'].includes(mode)) throw new Error('margin_mode must be "cross" or "isolated"');
       try {
         const modeParams = exchange === 'okx' && leverage ? { lever: String(leverage) } : {};
+
+        // OKX isolated: try hedge mode first, fallback to one-way mode
         if (exchange === 'okx' && mode === 'isolated') {
+          let hedgeModeSuccess = true;
           const modeResults = [];
           for (const ps of ['long', 'short']) {
             try {
@@ -433,12 +458,30 @@ cli({
               const m = e.message || String(e);
               if (m.includes('already') || m.includes('No need') || m.includes('margin mode is not modified')) {
                 modeResults.push({ posSide: ps, unchanged: true });
+              } else if (m.includes('posSide') || m.includes('51000')) {
+                hedgeModeSuccess = false;
+                break;
               } else {
                 modeResults.push({ posSide: ps, error: m });
               }
             }
           }
-          results.margin_mode = { success: true, mode, details: modeResults };
+          if (hedgeModeSuccess) {
+            results.margin_mode = { success: true, mode, details: modeResults };
+          } else {
+            // Fallback: one-way position mode
+            try {
+              const res = await ex.setMarginMode(mode, symbol, modeParams);
+              results.margin_mode = { success: true, mode, response: res };
+            } catch (e2) {
+              const m2 = e2.message || String(e2);
+              if (m2.includes('already') || m2.includes('No need') || m2.includes('margin mode is not modified')) {
+                results.margin_mode = { success: true, mode, message: `已经是 ${mode} 模式` };
+              } else {
+                results.margin_mode = { success: false, mode, error: m2 };
+              }
+            }
+          }
         } else {
           try {
             const res = await ex.setMarginMode(mode, symbol, modeParams);
