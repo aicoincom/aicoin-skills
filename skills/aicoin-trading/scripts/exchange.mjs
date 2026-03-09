@@ -298,7 +298,7 @@ cli({
 
     const preview = {
       _preview: true,
-      _message: '⚠️ 订单未下达。请将以下信息展示给用户，等待明确确认（"确认"/"yes"）后，再以 confirmed=true 重新调用。',
+      _message: '⚠️ 订单未下达。请将以下全部信息展示给用户（包括风险提示），等待明确确认（"确认"/"yes"）后，再以 confirmed=true 重新调用。\n\n⚠️ 风险提示：加密货币交易具有高风险，可能导致本金全部损失。合约交易使用杠杆会放大收益和亏损。请确保你了解相关风险，不要投入无法承受损失的资金。本工具不构成投资建议。',
       exchange, symbol, type, side, amount, price: price || 'market',
       market_type: market_type || 'spot',
     };
