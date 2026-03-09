@@ -91,6 +91,21 @@ async function checkTier() {
     }
   }
 
+  // Fallback: if api-key-info didn't return a tier, infer from endpoint tests
+  // Use sequential logic: tier = highest where ALL previous tiers also pass
+  if (!keyInfo || !keyInfo.vip_type) {
+    let inferred = '免费版';
+    for (const test of TIER_TESTS) {
+      const r = results.find(r => r.套餐 === test.tier);
+      if (r && r.状态 === '✅ 可用') {
+        inferred = test.tier;
+      } else {
+        break;
+      }
+    }
+    currentTier = inferred;
+  }
+
   // Build output
   const tierIndex = TIER_ORDER.indexOf(currentTier);
   const nextTier = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null;
