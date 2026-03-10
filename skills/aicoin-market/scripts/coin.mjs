@@ -100,6 +100,12 @@ cli({
   super_depth: ({ symbol, key, amount = '10000', limit = '100' }) => apiGet('/api/upgrade/v2/futures/super-depth/history', { key: resolveSymbol(symbol || key), amount, limit }),
   trade_data: ({ symbol, dbkey, limit = '100' }) => apiGet('/api/upgrade/v2/futures/trade-data', { dbkey: resolveDbkey(symbol || dbkey), limit }),
 
+  // Aliases: actions models often mis-route here from features.mjs
+  big_orders: ({ symbol }) => apiGet('/api/v2/order/bigOrder', { symbol: resolveSymbol(symbol) }),
+  whale_orders: ({ symbol }) => apiGet('/api/v2/order/bigOrder', { symbol: resolveSymbol(symbol) }),
+  ls_ratio: () => apiGet('/api/v2/mix/ls-ratio'),
+  long_short_ratio: () => apiGet('/api/v2/mix/ls-ratio'),
+
   // API Key status check — run this when user asks about AiCoin API key config/safety
   api_key_info: async () => {
     const envPaths = [

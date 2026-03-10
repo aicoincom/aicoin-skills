@@ -41,12 +41,10 @@ node scripts/exchange.mjs create_order '{"exchange":"okx","symbol":"BTC/USDT:USD
 | 取消订单 | `node scripts/exchange.mjs cancel_order '{"exchange":"okx","symbol":"BTC/USDT","order_id":"xxx"}'` |
 | 单独设杠杆 | `node scripts/exchange.mjs set_leverage '{"exchange":"okx","symbol":"BTC/USDT:USDT","leverage":10,"market_type":"swap"}'` |
 
-## 数量换算
+## 数量
 
-| 用户说 | 现货 amount | 合约 amount（OKX BTC，contractSize=0.01）|
-|--------|-----------|----------------------------------------|
-| "0.01 BTC" | 0.01 | 0.01/0.01=1 张 |
-| "100U" | 100/价格 | (100/价格)/contractSize |
+**合约自动换算：** amount 传用户说的币数量（如 0.01），脚本自动转张数。传整数则视为张数。
+**现货：** amount = 币数量。
 
 **格式：** 现货 `BTC/USDT`，合约 `BTC/USDT:USDT`，Hyperliquid 用 USDC: `BTC/USDC:USDC`。
 

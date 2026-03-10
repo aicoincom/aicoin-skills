@@ -113,6 +113,24 @@ async function getExchange(id, marketType, skipAuth = false) {
   return new Ex(opts);
 }
 
+// createOrder with OKX net-mode posSide fallback
+async function placeOrder(ex, symbol, type, side, amount, price, params, exchange, marketType) {
+  const p = { ...(params || {}) };
+  if (exchange === 'okx' && marketType && marketType !== 'spot' && !p.posSide) {
+    p.posSide = p.reduceOnly ? (side === 'buy' ? 'short' : 'long') : (side === 'buy' ? 'long' : 'short');
+  }
+  try {
+    return await ex.createOrder(symbol, type, side, amount, price, p);
+  } catch (e) {
+    // OKX net mode doesn't accept posSide — retry without it
+    if (String(e).includes('posSide') || String(e).includes('51000')) {
+      delete p.posSide;
+      return await ex.createOrder(symbol, type, side, amount, price, p);
+    }
+    throw e;
+  }
+}
+
 cli({
   exchanges: async () => ({
     supported: SUPPORTED.map(id => {
@@ -229,15 +247,7 @@ cli({
       if (isInternal) {
         // Internal call: execute directly with provided params
         const ex = await getExchange(exchange, market_type);
-        const orderParams = { ...(params || {}) };
-        if (exchange === 'okx' && market_type && market_type !== 'spot' && !orderParams.posSide) {
-          if (orderParams.reduceOnly) {
-            orderParams.posSide = side === 'buy' ? 'short' : 'long';
-          } else {
-            orderParams.posSide = side === 'buy' ? 'long' : 'short';
-          }
-        }
-        const order = await ex.createOrder(symbol, type, side, amount, price, orderParams);
+        const order = await placeOrder(ex, symbol, type, side, amount, price, params, exchange, market_type);
         if (market_type && market_type !== 'spot') {
           try {
             await ex.loadMarkets();
@@ -262,19 +272,10 @@ cli({
         throw new Error('订单预览已过期（超过5分钟），请重新创建订单预览。');
       }
 
-      try { unlinkSync(pendingFile); } catch {}
-
       // Execute with stored params (prevents model from tampering between preview and confirm)
       const ex = await getExchange(pending.exchange, pending.market_type);
-      const orderParams = { ...(pending.params || {}) };
-      if (pending.exchange === 'okx' && pending.market_type && pending.market_type !== 'spot' && !orderParams.posSide) {
-        if (orderParams.reduceOnly) {
-          orderParams.posSide = pending.side === 'buy' ? 'short' : 'long';
-        } else {
-          orderParams.posSide = pending.side === 'buy' ? 'long' : 'short';
-        }
-      }
-      const order = await ex.createOrder(pending.symbol, pending.type, pending.side, pending.amount, pending.price, orderParams);
+      const order = await placeOrder(ex, pending.symbol, pending.type, pending.side, pending.amount, pending.price, pending.params, pending.exchange, pending.market_type);
+      try { unlinkSync(pendingFile); } catch {}
       if (pending.market_type && pending.market_type !== 'spot') {
         try {
           await ex.loadMarkets();
@@ -293,6 +294,12 @@ cli({
     const ex = await getExchange(exchange, market_type);
     await ex.loadMarkets();
     const mkt = ex.markets[symbol];
+
+    // Auto-convert: non-integer amount on contract = user gave base currency (e.g. 0.01 BTC → 1 contract)
+    if (mkt?.contractSize && !Number.isInteger(Number(amount))) {
+      amount = Math.max(1, Math.round(Number(amount) / mkt.contractSize));
+    }
+
     const pendingOrder = { exchange, symbol, type, side, amount, price, market_type, params, timestamp: Date.now() };
     writeFileSync(pendingFile, JSON.stringify(pendingOrder));
 

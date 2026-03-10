@@ -14,7 +14,7 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 
 ## Critical Rules
 
-1. **NEVER fabricate data.** Always run scripts to fetch real-time data.
+1. **NEVER fabricate data.** Always run scripts. If data is empty or errors occur, say so directly — do NOT invent explanations.
 2. **NEVER use curl, web_fetch, or browser** for crypto data. Always use these scripts.
 3. **NEVER run `env` or `printenv`** — leaks API secrets into logs.
 4. **Scripts auto-load `.env`** — never pass credentials inline.
