@@ -249,8 +249,8 @@ Always explain this to the user when showing backtest results.
 |------|---------|
 | Quick-generate strategy | `node scripts/ft-deploy.mjs create_strategy '{"name":"MyStrat","timeframe":"15m","indicators":["rsi","macd"],"aicoin_data":["funding_rate"]}'` |
 | Backtest | `node scripts/ft-deploy.mjs backtest '{"strategy":"MyStrat","timeframe":"1h","timerange":"20250101-20260301"}'` |
-| Deploy (dry-run) | `node scripts/ft-deploy.mjs deploy '{"pairs":["BTC/USDT:USDT"]}'` |
-| Deploy (live) | `node scripts/ft-deploy.mjs deploy '{"dry_run":false,"pairs":["BTC/USDT:USDT"]}'` |
+| Deploy (dry-run) | `node scripts/ft-deploy.mjs deploy '{"strategy":"MyStrat","pairs":["BTC/USDT:USDT"]}'` |
+| Deploy (live) | `node scripts/ft-deploy.mjs deploy '{"strategy":"MyStrat","dry_run":false,"pairs":["BTC/USDT:USDT"]}'` |
 | Hyperopt | `node scripts/ft-deploy.mjs hyperopt '{"strategy":"MyStrat","timeframe":"1h","timerange":"20250101-20260301","epochs":100}'` |
 | Strategy list | `node scripts/ft-deploy.mjs strategy_list` |
 | Bot status | `node scripts/ft-deploy.mjs status` |
@@ -282,7 +282,7 @@ Get at https://www.aicoin.com/opendata
 | Action | Params |
 |--------|--------|
 | `check` | None |
-| `deploy` | `{"dry_run":true,"pairs":["BTC/USDT:USDT"]}` |
+| `deploy` | `{"strategy":"MACDKDJStrategy","dry_run":true,"pairs":["BTC/USDT:USDT"]}` — **strategy 必填，指定策略名** |
 | `backtest` | `{"strategy":"Name","timeframe":"1h","timerange":"20250101-20260301"}` |
 | `hyperopt` | `{"strategy":"Name","timeframe":"1h","epochs":100}` |
 | `create_strategy` | `{"name":"Name","timeframe":"15m","indicators":["rsi","macd"],"aicoin_data":["funding_rate"]}` |

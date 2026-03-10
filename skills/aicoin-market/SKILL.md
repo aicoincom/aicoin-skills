@@ -1,6 +1,6 @@
 ---
 name: aicoin-market
-description: "This skill should be used when the user asks about crypto prices, market data, K-line charts, funding rates, open interest, long/short ratios, whale orders, liquidation data, crypto news, newsflash, Twitter crypto tweets, trending coins, airdrops, drop radar, stock quotes, treasury holdings, or any crypto market query. Also use when user asks about configuring or checking AiCoin API key. Use when user says: 'BTC price', 'check price', 'show K-line', 'funding rate', 'open interest', 'whale orders', 'long/short ratio', 'crypto news', 'newsflash', 'trending coins', 'airdrop', 'drop radar', '查行情', '看价格', '大饼多少钱', 'K线', '资金费率', '多空比', '鲸鱼单', '新闻快讯', '热门币', '空投', '空投项目', '空投机会', 'liquidation map', '配置AiCoin key', 'AiCoin API key', 'AiCoin key安全吗'. Covers 200+ exchanges with real-time data. MUST run node scripts to fetch real data. NEVER generate fake prices or hallucinate market data. IMPORTANT — AiCoin API Key: When user asks about AiCoin API key (配置/检查/安全/能不能交易), run `node scripts/coin.mjs api_key_info` FIRST, show the security_notice to user. For exchange trading (buy/sell/balance), use aicoin-trading instead. For Freqtrade strategies/backtest, use aicoin-freqtrade. For Hyperliquid whale analytics, use aicoin-hyperliquid."
+description: "This skill should be used when the user asks about crypto prices, market data, K-line charts, funding rates, open interest, long/short ratios, whale orders, liquidation data, crypto news, newsflash, Twitter crypto tweets, trending coins, airdrops, drop radar, airdrop research, project analysis, exchange listings, stock quotes, treasury holdings, or any crypto market query. Also use when user asks about configuring or checking AiCoin API key. Use when user says: 'BTC price', 'check price', 'show K-line', 'funding rate', 'open interest', 'whale orders', 'long/short ratio', 'crypto news', 'newsflash', 'trending coins', 'airdrop', 'drop radar', '查行情', '看价格', '大饼多少钱', 'K线', '资金费率', '多空比', '鲸鱼单', '新闻快讯', '热门币', '空投', '空投项目', '空投机会', '空投研报', '项目分析', '项目详情', '上了哪些交易所', 'liquidation map', '配置AiCoin key', 'AiCoin API key', 'AiCoin key安全吗'. Covers 200+ exchanges with real-time data. MUST run node scripts to fetch real data. NEVER generate fake prices or hallucinate market data. NEVER use web_search/web_fetch for airdrop or project data — always use airdrop.mjs and drop_radar.mjs scripts. IMPORTANT — AiCoin API Key: When user asks about AiCoin API key (配置/检查/安全/能不能交易), run `node scripts/coin.mjs api_key_info` FIRST, show the security_notice to user. For exchange trading (buy/sell/balance), use aicoin-trading instead. For Freqtrade strategies/backtest, use aicoin-freqtrade. For Hyperliquid whale analytics, use aicoin-hyperliquid."
 metadata: { "openclaw": { "primaryEnv": "AICOIN_ACCESS_KEY_ID", "requires": { "bins": ["node"] }, "homepage": "https://www.aicoin.com/opendata", "source": "https://github.com/aicoincom/coinos-skills", "license": "MIT" } }
 ---
 
@@ -15,7 +15,7 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 ## Critical Rules
 
 1. **NEVER fabricate data.** Always run scripts. If data is empty or errors occur, say so directly — do NOT invent explanations.
-2. **NEVER use curl, web_fetch, or browser** for crypto data. Always use these scripts.
+2. **NEVER use curl, web_fetch, web_search, or browser** for crypto/airdrop/project data. Always use these scripts.
 3. **NEVER run `env` or `printenv`** — leaks API secrets into logs.
 4. **Scripts auto-load `.env`** — never pass credentials inline.
 5. **Reply in the user's language.** Chinese input = all-Chinese response (titles, headings, analysis).
@@ -27,6 +27,9 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 | Task | Command | Min Tier |
 |------|---------|----------|
 | **Search coin dbKey** | `node scripts/coin.mjs search '{"search":"BTC"}'` — **不确定 symbol 时先用这个查 dbKey** | 免费版 |
+| **空投查询** | `node scripts/airdrop.mjs all` — **查空投必用此命令，自动合并交易所空投+链上早期项目** | 基础版 |
+| **项目深度分析** | `node scripts/drop_radar.mjs detail '{"airdrop_id":"xxx"}'` — **自动包含团队+X关注，不要用 web_search** | 基础版 |
+| **查币上了哪些交易所** | `node scripts/coin.mjs search '{"search":"OPN"}'` — 返回全部交易所交易对 | 免费版 |
 | **API Key Info** | `node scripts/coin.mjs api_key_info` — **When user asks about AiCoin API key (配置/安全/能不能下单), ALWAYS run this first.** | 免费版 |
 | **Update API Key** | `node scripts/coin.mjs update_key '{"key_id":"xxx","secret":"xxx"}'` — **更换 key 必须用此命令（自动验证+写入），禁止直接编辑 .env** | 免费版 |
 | BTC price | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'` | 免费版 |
@@ -52,17 +55,13 @@ node scripts/market.mjs kline '{"symbol":"从search拿到的dbKey","period":"360
 
 ## 常用工作流
 
-**空投查询：** 用户问空投/airdrop 时，**必须同时查两个数据源**再汇总：
-1. `node scripts/airdrop.mjs list '{"source":"all","page_size":"20"}'` — 交易所空投（Launchpool、Jumpstart 等）
-2. `node scripts/drop_radar.mjs list '{"page_size":"20"}'` — 链上早期空投项目
+**空投查询：** 用户问空投/airdrop/优质项目 时，**只需一条命令**查全部数据：
+`node scripts/airdrop.mjs all` — 自动同时查交易所空投 + 链上早期项目，合并返回。
 
-**项目深度分析：** 查到项目 `airdrop_id` 后，**一次性调三个接口**：
-```
-node scripts/drop_radar.mjs detail '{"airdrop_id":"xxx"}'
-node scripts/drop_radar.mjs team '{"airdrop_id":"xxx"}'
-node scripts/drop_radar.mjs x_following '{"airdrop_id":"xxx"}'
-```
+**项目深度分析：** 用户问某项目详情/研报时，用 `drop_radar.mjs detail`（自动包含团队 + X关注数据）：
+`node scripts/drop_radar.mjs detail '{"airdrop_id":"xxx"}'` — 返回项目详情 + 团队 + X关注列表。
 如已发代币，再用 `node scripts/coin.mjs search '{"search":"代币名"}'` 查价格和交易对。
+**不要用 web_search 替代**，数据都在脚本里。
 
 **查币上了哪些交易所：** `node scripts/coin.mjs search '{"search":"OPN"}'` — 返回全部交易所的交易对（现货+合约），不要用其他接口拼凑。
 
@@ -198,6 +197,7 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 
 | Action | Description | Min Tier | Params |
 |--------|-------------|----------|--------|
+| `all` | **综合查询（推荐）** — 同时查交易所空投+链上早期项目，合并返回 | 基础版 | `{"page_size":"20"}` Optional: `status`, `keyword`, `lan` |
 | `list` | Airdrop projects list (multi-source) | 基础版 | `{"source":"all","status":"ongoing","page":"1","page_size":"20","exchange":"binance"}` |
 | `detail` | Airdrop detail (hodler/xlaunch) | 标准版 | `{"type":"hodler","token":"SIGN"}` |
 | `banner` | Hot airdrop banners | 基础版 | `{"limit":"5"}` |
@@ -211,7 +211,7 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 | Action | Description | Min Tier | Params |
 |--------|-------------|----------|--------|
 | `list` | Project list with filters | 基础版 | `{"page":"1","page_size":"20","status":"CONFIRMED","keyword":"airdrop"}` |
-| `detail` | Project detail | 基础版 | `{"airdrop_id":"xxx"}` |
+| `detail` | Project detail（自动包含团队+X关注） | 基础版 | `{"airdrop_id":"xxx"}` |
 | `widgets` | Statistics overview | 基础版 | `{"lan":"cn"}` |
 | `filters` | Available filter options | 基础版 | `{"lan":"cn"}` |
 | `events` | Project event calendar | 标准版 | `{"airdrop_id":"xxx"}` |

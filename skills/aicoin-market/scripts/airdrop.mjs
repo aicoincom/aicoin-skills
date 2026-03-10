@@ -3,6 +3,18 @@
 import { apiGet, cli } from '../lib/aicoin-api.mjs';
 
 cli({
+  // 综合查询：同时查 airdrop(交易所空投) + drop_radar(链上早期项目)，一次调用返回全部数据
+  all: async ({ page_size, status, keyword, lan } = {}) => {
+    const ps = page_size || '20';
+    const [airdrop, radar] = await Promise.all([
+      apiGet('/api/upgrade/v2/content/airdrop/list', { source: 'all', page_size: ps, ...(lan ? { lan } : {}) }).catch(e => ({ error: e.message, list: [] })),
+      apiGet('/api/upgrade/v2/content/drop-radar/list', { page_size: ps, ...(status ? { status } : {}), ...(keyword ? { keyword } : {}), ...(lan ? { lan } : {}) }).catch(e => ({ error: e.message, list: [] })),
+    ]);
+    return {
+      交易所空投: { count: airdrop.data?.count || 0, list: airdrop.data?.list || [] },
+      链上早期项目: { count: radar.data?.count || 0, list: radar.data?.list || [] },
+    };
+  },
   list: ({ source, status, page, page_size, exchange, activity_type, lan } = {}) => {
     const p = {};
     if (source) p.source = source;
