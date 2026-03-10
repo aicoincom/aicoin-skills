@@ -20,12 +20,14 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 4. **Scripts auto-load `.env`** — never pass credentials inline.
 5. **Reply in the user's language.** Chinese input = all-Chinese response (titles, headings, analysis).
 6. **On 304/403 error — STOP, do NOT retry.** This is a paid feature. Follow the [Paid Feature Guide](#paid-feature-guide) to help the user upgrade.
+7. **更换 API Key 只能用 `update_key` 命令。** 禁止直接编辑 .env、禁止用 gateway/edit 工具改 key。`update_key` 会先验证 key 有效才写入。
 
 ## Quick Reference
 
 | Task | Command | Min Tier |
 |------|---------|----------|
 | **API Key Info** | `node scripts/coin.mjs api_key_info` — **When user asks about AiCoin API key (配置/安全/能不能下单), ALWAYS run this first.** | 免费版 |
+| **Update API Key** | `node scripts/coin.mjs update_key '{"key_id":"xxx","secret":"xxx"}'` — **更换 key 必须用此命令（自动验证+写入），禁止直接编辑 .env** | 免费版 |
 | BTC price | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'` | 免费版 |
 | K-line | `node scripts/market.mjs kline '{"symbol":"btcusdt:okex","period":"3600","size":"100"}'` | 免费版 |
 | Funding rate | `node scripts/coin.mjs funding_rate '{"symbol":"BTC"}'` | 基础版 |
@@ -76,6 +78,7 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 | Action | Description | Min Tier | Params |
 |--------|-------------|----------|--------|
 | `api_key_info` | **AiCoin API Key status + security notice. Run when user asks about key config/safety.** | 免费版 | None |
+| `update_key` | **更换 API Key（先验证再写入 .env）。禁止直接编辑 .env 更换 key。** | 免费版 | `{"key_id":"xxx","secret":"xxx"}` |
 | `coin_ticker` | Real-time prices | 免费版 | `{"coin_list":"bitcoin,ethereum"}` |
 | `coin_list` | List all coins | 基础版 | None |
 | `coin_config` | Coin profile | 基础版 | `{"coin_list":"bitcoin"}` |

@@ -93,6 +93,22 @@ export async function apiGet(path, params = {}) {
   return json;
 }
 
+// Validate a key pair by making a test API call
+export async function validateKey(keyId, secret) {
+  const nonce = randomBytes(4).toString('hex');
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const str = `AccessKeyId=${keyId}&SignatureNonce=${nonce}&Timestamp=${ts}`;
+  const hex = createHmac('sha1', secret).update(str).digest('hex');
+  const sig = Buffer.from(hex, 'binary').toString('base64');
+  const qs = new URLSearchParams({ coin_list: 'bitcoin', AccessKeyId: keyId, SignatureNonce: nonce, Timestamp: ts, Signature: sig });
+  try {
+    const res = await fetch(`${BASE}/api/v2/coin/ticker?${qs}`, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return { valid: false, error: `HTTP ${res.status}` };
+    const json = await res.json();
+    return (json.code === '0' || json.success !== false) ? { valid: true } : { valid: false, error: json.msg || 'invalid key' };
+  } catch (e) { return { valid: false, error: e.message }; }
+}
+
 export async function apiPost(path, body = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',

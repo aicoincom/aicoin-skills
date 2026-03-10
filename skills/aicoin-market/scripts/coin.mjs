@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // AiCoin Coin Data CLI
-import { apiGet, apiPost, cli } from '../lib/aicoin-api.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { apiGet, apiPost, cli, validateKey } from '../lib/aicoin-api.mjs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // Symbol alias mapping: fuzzy input → AiCoin internal format
@@ -132,5 +132,25 @@ cli({
         : { configured: false, setup: '访问 https://www.aicoin.com/opendata 注册 → 创建API Key → 添加到 .env: AICOIN_ACCESS_KEY_ID=xxx / AICOIN_ACCESS_SECRET=xxx' },
       security_notice: '⚠️ AiCoin API Key 与交易所 API Key 是完全独立的两套密钥：(1) AiCoin API Key 仅用于获取市场数据（行情、K线、资金费率等），无法进行任何交易操作，也无法读取你在交易所的任何信息。(2) 如需在交易所下单交易，需要单独到各交易所后台申请交易 API Key。(3) 所有密钥仅保存在你的本地设备 .env 文件中，不会上传到任何服务器。',
     };
+  },
+
+  // Update AiCoin API key — validates before writing to .env
+  update_key: async ({ key_id, secret }) => {
+    if (!key_id || !secret) return { error: '需要同时提供 key_id 和 secret', usage: 'node coin.mjs update_key \'{"key_id":"xxx","secret":"xxx"}\'' };
+    const check = await validateKey(key_id, secret);
+    if (!check.valid) return { error: `Key 验证失败: ${check.error}`, hint: '请检查 key_id 和 secret 是否正确' };
+    const envPaths = [
+      resolve(process.cwd(), '.env'),
+      resolve(process.env.HOME || '', '.openclaw', 'workspace', '.env'),
+      resolve(process.env.HOME || '', '.openclaw', '.env'),
+    ];
+    let envFile = envPaths.find(f => existsSync(f)) || envPaths[1];
+    let content = existsSync(envFile) ? readFileSync(envFile, 'utf-8') : '';
+    const replaceOrAppend = (content, k, v) => content.match(new RegExp(`^${k}=`, 'm'))
+      ? content.replace(new RegExp(`^${k}=.*`, 'm'), `${k}=${v}`) : content + `\n${k}=${v}`;
+    content = replaceOrAppend(content, 'AICOIN_ACCESS_KEY_ID', key_id);
+    content = replaceOrAppend(content, 'AICOIN_ACCESS_SECRET', secret);
+    writeFileSync(envFile, content, 'utf-8');
+    return { success: true, message: '✅ Key 已验证有效并更新', key_preview: key_id.slice(0, 8) + '...', env_file: envFile };
   },
 });

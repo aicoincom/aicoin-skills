@@ -57,7 +57,14 @@ function hasCommand(cmd) {
 
 // Find the best Python >= 3.11 (Freqtrade requirement)
 function findPython() {
-  for (const bin of ['python3.13', 'python3.12', 'python3.11', 'python3']) {
+  const names = ['python3.13', 'python3.12', 'python3.11', 'python3'];
+  // Also check well-known paths that may not be in OpenClaw's PATH
+  const extraDirs = ['/opt/homebrew/bin', '/usr/local/bin', `${process.env.HOME}/.local/bin`];
+  const candidates = [...names];
+  for (const dir of extraDirs) {
+    for (const n of names.slice(0, 3)) candidates.push(resolve(dir, n));
+  }
+  for (const bin of candidates) {
     try {
       const version = run(`${bin} --version`);
       const match = version.match(/(\d+)\.(\d+)/);
@@ -77,17 +84,42 @@ function ensureModernPython() {
 
   // No Python 3.11+ found — try to install
   if (process.platform === 'darwin') {
-    if (!hasCommand('brew')) {
-      throw new Error('Homebrew not found. Install: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"');
-    }
-    console.error('Python 3.11+ not found. Installing Python 3.12 via Homebrew...');
-    const brewEnv = { ...process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' };
-    run('brew install python@3.12', { timeout: 300000, env: brewEnv });
-    py = findPython();
-    if (py) return py;
+    // Strategy 1: uv — downloads pre-built Python, works on all macOS versions
+    try {
+      const uvBin = resolve(process.env.HOME || '', '.local', 'bin', 'uv');
+      if (!existsSync(uvBin)) {
+        console.error('Installing uv (fast Python manager)...');
+        run('curl -LsSf https://astral.sh/uv/install.sh | sh', { timeout: 60000 });
+      }
+      if (existsSync(uvBin)) {
+        console.error('Installing Python 3.12 via uv...');
+        run(`${uvBin} python install 3.12`, { timeout: 300000 });
+        try {
+          const pyPath = run(`${uvBin} python find 3.12`);
+          if (pyPath) {
+            const ver = run(`${pyPath} --version`);
+            const m = ver.match(/(\d+)\.(\d+)/);
+            if (m && Number(m[1]) === 3 && Number(m[2]) >= 11) {
+              return { bin: pyPath, major: Number(m[1]), minor: Number(m[2]), version: ver };
+            }
+          }
+        } catch {}
+      }
+    } catch (e) { console.error(`uv: ${e.message}`); }
+
+    // Strategy 2: brew (may fail on newer macOS)
+    try {
+      if (hasCommand('brew')) {
+        console.error('Trying brew install python@3.12...');
+        const brewEnv = { ...process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' };
+        run('brew install python@3.12', { timeout: 300000, env: brewEnv });
+        py = findPython();
+        if (py) return py;
+      }
+    } catch (e) { console.error(`brew: ${e.message}`); }
   }
 
-  throw new Error('Python 3.11+ required. Install: brew install python@3.12 (macOS) or apt install python3.12 python3.12-venv (Linux)');
+  throw new Error('Python 3.11+ required. Install options:\n• curl -LsSf https://astral.sh/uv/install.sh | sh && uv python install 3.12\n• brew install python@3.12\n• https://www.python.org/downloads/');
 }
 
 // ─── Exchange & config ───
@@ -272,8 +304,11 @@ const actions = {
       }
 
       // Run official setup.sh (handles TA-Lib, venv, all dependencies)
+      // Ensure Python 3.11+ is in PATH so setup.sh can find it
       console.error('Running Freqtrade setup.sh (this may take a few minutes)...');
-      run(`cd ${SRC_DIR} && ./setup.sh -i`, { timeout: 600000 });
+      const pyDir = dirname(py.bin);
+      const setupEnv = { ...process.env, PATH: `${pyDir}:${process.env.PATH}` };
+      run(`cd ${SRC_DIR} && ./setup.sh -i`, { timeout: 600000, env: setupEnv });
 
       if (!existsSync(FT_BIN)) {
         throw new Error('Freqtrade installation failed. Check output above for errors.');
