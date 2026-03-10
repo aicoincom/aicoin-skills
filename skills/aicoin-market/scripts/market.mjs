@@ -44,9 +44,10 @@ cli({
     return apiGet('/api/v2/futures/interest', p);
   },
   // kline
-  kline: ({ symbol, period, size = '100', since, open_time }) => {
-    const p = { symbol: resolveKlineSymbol(symbol), size };
-    if (period) p.period = period;
+  kline: async ({ symbol, period, size = '100', since, open_time } = {}) => {
+    if (!symbol) return { error: 'symbol is required. Example: "btcusdt:okex" or short name "btc"' };
+    if (!period) return { error: 'period is required. Values: "60"(1m), "300"(5m), "900"(15m), "1800"(30m), "3600"(1h), "14400"(4h), "86400"(1d), "604800"(1w)' };
+    const p = { symbol: resolveKlineSymbol(symbol), period, size };
     if (since) p.since = since;
     if (open_time) p.open_time = open_time;
     return apiGet('/api/v2/commonKline/dataRecords', p);
