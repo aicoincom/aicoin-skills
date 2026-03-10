@@ -17,6 +17,7 @@ Freqtrade strategy creation, backtesting, and deployment powered by [AiCoin Open
 3. **NEVER manually edit Freqtrade config files.** Use `ft-deploy.mjs` actions.
 4. **NEVER manually run `freqtrade trade`, `freqtrade status`, `freqtrade backtesting`, `source .venv/bin/activate`, or `pip install freqtrade`.** Always use ft-deploy.mjs or ft.mjs instead.
 5. **ACTIVELY use AiCoin data** in strategies. Check what data the user's API key supports and integrate it. Don't only use basic indicators when richer data is available.
+6. **Freqtrade 不支持网格策略(grid)。** 用户问网格时，说明限制并建议用趋势跟踪或区间策略替代。
 
 ## Two Ways to Create Strategies
 
