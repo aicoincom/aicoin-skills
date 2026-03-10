@@ -39,8 +39,9 @@ function resolveDbkey(dbkey) {
 }
 
 cli({
-  // coin_search
+  // coin search — discover dbKeys for any coin/exchange/market type
   search: ({ search, page, page_size, market, trade_type }) => {
+    if (!search) return Promise.resolve({ error: 'search is required', usage: 'node coin.mjs search \'{"search":"BTC"}\'' });
     const p = { search };
     if (page) p.page = page;
     if (page_size) p.page_size = page_size;

@@ -26,6 +26,7 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 
 | Task | Command | Min Tier |
 |------|---------|----------|
+| **Search coin dbKey** | `node scripts/coin.mjs search '{"search":"BTC"}'` — **不确定 symbol 时先用这个查 dbKey** | 免费版 |
 | **API Key Info** | `node scripts/coin.mjs api_key_info` — **When user asks about AiCoin API key (配置/安全/能不能下单), ALWAYS run this first.** | 免费版 |
 | **Update API Key** | `node scripts/coin.mjs update_key '{"key_id":"xxx","secret":"xxx"}'` — **更换 key 必须用此命令（自动验证+写入），禁止直接编辑 .env** | 免费版 |
 | BTC price | `node scripts/coin.mjs coin_ticker '{"coin_list":"bitcoin"}'` | 免费版 |
@@ -38,9 +39,16 @@ Crypto market data toolkit powered by [AiCoin Open API](https://www.aicoin.com/o
 | Open interest | `node scripts/coin.mjs open_interest '{"symbol":"BTC","interval":"15m"}'` | 专业版 |
 | Liquidation map | `node scripts/coin.mjs liquidation_map '{"dbkey":"btcswapusdt:binance","cycle":"24h"}'` | 高级版 |
 
-**Symbol shortcuts:** `BTC`, `ETH`, `SOL`, `DOGE`, `XRP` auto-resolve in coin.mjs.
+**Symbol Discovery:** dbKey 格式不用猜。先用 `search` 查，再用返回的 dbKey 调其他接口：
+```
+node scripts/coin.mjs search '{"search":"BTC"}'          # → dbKeys: ["btcswapusdt:binance", "btcusdt:okex", ...]
+node scripts/coin.mjs search '{"search":"CL"}'           # → dbKeys: ["clswapusdc:hyperliquid", ...]
+node scripts/market.mjs kline '{"symbol":"从search拿到的dbKey","period":"3600"}'
+```
 
-**Chinese Slang:** 大饼=BTC, 姨太=ETH, 狗狗=DOGE, 瑞波=XRP, 索拉纳=SOL.
+**常用币快捷方式：** `BTC`, `ETH`, `SOL`, `DOGE`, `XRP` 在 coin.mjs 里自动解析，无需 search。其他币必须先 search。
+
+**中文俗称：** 大饼=BTC, 姨太=ETH, 狗狗=DOGE, 瑞波=XRP, 索拉纳=SOL.
 
 ## Free vs Paid Endpoints
 
@@ -77,6 +85,7 @@ All scripts: `node scripts/<name>.mjs <action> [json-params]`
 
 | Action | Description | Min Tier | Params |
 |--------|-------------|----------|--------|
+| `search` | **搜索币种，获取 dbKey。** 不确定 symbol 格式时先用这个查。 | 免费版 | `{"search":"BTC"}` Optional: `market`, `trade_type`, `page`, `page_size` |
 | `api_key_info` | **AiCoin API Key status + security notice. Run when user asks about key config/safety.** | 免费版 | None |
 | `update_key` | **更换 API Key（先验证再写入 .env）。禁止直接编辑 .env 更换 key。** | 免费版 | `{"key_id":"xxx","secret":"xxx"}` |
 | `coin_ticker` | Real-time prices | 免费版 | `{"coin_list":"bitcoin,ethereum"}` |
