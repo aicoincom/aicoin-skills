@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Freqtrade One-Click Deployment via git clone + setup.sh (official method)
 // Reads exchange keys from .env, creates config, starts as background process
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -611,6 +611,31 @@ const actions = {
     if (pid) { try { process.kill(pid, 'SIGTERM'); } catch {} }
     try { writeFileSync(PID_FILE, ''); } catch {}
     return { removed: true, note: `Process stopped. Config preserved at ${FT_DIR}. To fully remove: rm -rf ${FT_DIR}` };
+  },
+
+  backtest_results: async () => {
+    const resultsDir = resolve(USER_DATA, 'backtest_results');
+    if (!existsSync(resultsDir)) return { results: [], path: resultsDir };
+    const files = readdirSync(resultsDir)
+      .filter(f => f.endsWith('.meta.json'))
+      .map(f => {
+        try {
+          const meta = JSON.parse(readFileSync(resolve(resultsDir, f), 'utf8'));
+          const strategy = Object.keys(meta)[0] || 'unknown';
+          const info = meta[strategy] || {};
+          return {
+            file: f.replace('.meta.json', ''),
+            strategy,
+            timeframe: info.timeframe || '',
+            start: info.backtest_start_ts ? new Date(info.backtest_start_ts * 1000).toISOString().slice(0, 10) : '',
+            end: info.backtest_end_ts ? new Date(info.backtest_end_ts * 1000).toISOString().slice(0, 10) : '',
+          };
+        } catch { return null; }
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.file.localeCompare(a.file))
+      .slice(0, 10);
+    return { results: files, path: resultsDir };
   },
 };
 

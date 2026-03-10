@@ -288,6 +288,7 @@ Get at https://www.aicoin.com/opendata
 | `hyperopt` | `{"strategy":"Name","timeframe":"1h","epochs":100}` |
 | `create_strategy` | `{"name":"Name","timeframe":"15m","indicators":["rsi","macd"],"aicoin_data":["funding_rate"]}` |
 | `strategy_list` | None |
+| `backtest_results` | None — lists recent backtest result files |
 | `start` / `stop` / `status` / `logs` | None / `{"lines":50}` |
 
 ### ft.mjs — Bot Control (requires running process)
