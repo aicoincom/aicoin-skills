@@ -3,3 +3,6 @@ issues.md
 .pending-order.json
 node_modules/
 package-lock.json
+*.sqlite
+*.sqlite-journal
+.env
